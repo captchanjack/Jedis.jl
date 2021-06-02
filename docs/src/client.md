@@ -1,0 +1,16 @@
+# Redis Client Connection
+
+```@docs
+Client
+execute(command::AbstractArray, client::Client)
+Jedis.GLOBAL_CLIENT
+set_global_client
+get_global_client
+Jedis.copy
+disconnect!
+reconnect!
+wait_until_subscribed
+wait_until_unsubscribed
+wait_until_channel_unsubscribed
+wait_until_pattern_unsubscribed
+```

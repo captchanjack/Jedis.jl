@@ -92,7 +92,7 @@ end
 
 Creates a new Client instance, copying the connection parameters of the input.
 """
-function copy(client::Client)
+function Base.copy(client::Client)
     return Client(; host=client.host, port=client.port, database=client.database, password=client.password, username=client.username)
 end
 

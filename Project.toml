@@ -1,7 +1,7 @@
 name = "Jedis"
 uuid = "b89ccfe0-2c5f-46f6-b89b-da3e1c2e286f"
 authors = ["Jack Chan <j.chan2504@gmail.com>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"

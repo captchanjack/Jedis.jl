@@ -81,6 +81,11 @@ Reads any bytes before the next CRLF (\r\n) in a TCPScoket, blocks if no bytes a
 """
 function recv(s::TCPSocket)
     line = readline(s)
+
+    if isempty(line)
+        return nothing
+    end
+
     handler = RESPHandler[line[1]]
     return handler(s, line[2:end])
 end

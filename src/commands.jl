@@ -62,6 +62,34 @@ Delete a key.
 del(key, keys...; client=get_global_client()) = execute(["DEL", key, keys...], client)
 
 """
+    exists(key[, keys...])
+
+Determine if a key exists.
+"""
+exists(key, keys...; client=get_global_client()) = execute(["EXISTS", key, keys...], client)
+
+"""
+    hexists(key, field)
+
+Determine if a hash field exists.
+"""
+hexists(key, field; client=get_global_client()) = execute(["HEXISTS", key, field], client)
+
+"""
+    keys(pattern)
+
+Find all keys matching the pattern.
+"""
+Base.keys(pattern; client=get_global_client()) = execute(["KEYS", pattern], client)
+
+"""
+    hkeys(key)
+
+Get all fields in a hash.
+"""
+hkeys(key; client=get_global_client()) = execute(["HKEYS", key], client)
+
+"""
     setex(key, seconds, value)
 
 Set the value and expiration of a key.
@@ -198,6 +226,20 @@ lpush(key, element, elements...; client=get_global_client()) = execute(["LPUSH",
 Append one or multiple elements to a list.
 """
 rpush(key, element, elements...; client=get_global_client()) = execute(["RPUSH", key, element, elements...], client)
+
+"""
+    lpos(key, element[, rank, num_matches, len])
+
+Return the index of matching element on a list.
+"""
+lpos(key, element, rank="", num_matches="", len=""; client=get_global_client()) = execute(["LPOS", key, element, [isempty(rank) ? "" : "RANK", rank]..., [isempty(num_matches) ? "" : "COUNT", num_matches]..., [isempty(len) ? "" : "MAXLEN", len]...], client)
+
+"""
+    lrem(key, count, element)
+
+Remove elements from a list.
+"""
+lrem(key, count, element; client=get_global_client()) = execute(["LREM", key, count, element], client)
 
 """
     lpop(key)

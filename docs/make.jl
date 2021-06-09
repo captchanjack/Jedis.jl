@@ -15,6 +15,6 @@ makedocs(
 )
 
 deploydocs(
-    repo="https://github.com/captchanjack/Jedis.jl.git",
+    repo="github.com/captchanjack/Jedis.jl.git",
     devurl="docs"
 )

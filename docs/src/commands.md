@@ -18,6 +18,10 @@ quit
 set
 Jedis.get
 del
+exists
+hexists
+keys
+hkeys
 setex
 expire
 ttl
@@ -31,6 +35,8 @@ hmget
 hdel
 lpush
 rpush
+lpos
+lrem
 lpop
 rpop
 blpop

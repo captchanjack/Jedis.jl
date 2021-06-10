@@ -43,4 +43,10 @@ blpop
 brpop
 llen
 lrange
+incr
+incrby
+incrbyfloat
+hincrby
+hincrbyfloat
+zincrby
 ```

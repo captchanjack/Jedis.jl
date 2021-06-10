@@ -16,5 +16,6 @@ makedocs(
 
 deploydocs(
     repo="github.com/captchanjack/Jedis.jl.git",
+    devbranch="main",
     devurl="docs"
 )

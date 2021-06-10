@@ -282,3 +282,45 @@ llen(key; client=get_global_client()) = execute(["LLEN", key], client)
 Get a range of elements from a list.
 """
 lrange(key, start, stop; client=get_global_client()) = execute(["LRANGE", key, start, stop], client)
+
+"""
+    incr(key)
+
+Increment the integer value of a key by one.
+"""
+incr(key; client=get_global_client()) = execute(["INCR", key], client)
+
+"""
+    incrby(key, increment)
+
+Increment the integer value of a key by the given amount.
+"""
+incrby(key, increment; client=get_global_client()) = execute(["INCRBY", key, increment], client)
+
+"""
+    incrbyfloat(key, increment)
+
+Increment the float value of a key by the given amount.
+"""
+incrbyfloat(key, increment; client=get_global_client()) = execute(["INCRBYFLOAT", key, increment], client)
+
+"""
+    hincrby(key, field, increment)
+
+Increment the integer value of a hash field by the given number.
+"""
+hincrby(key, increment; client=get_global_client()) = execute(["HINCRBY", key, field, increment], client)
+
+"""
+    hincrbyfloat(key, field, increment)
+
+Increment the float value of a hash field by the given number.
+"""
+hincrbyfloat(key, field, increment; client=get_global_client()) = execute(["HINCRBYFLOAT", key, field, increment], client)
+
+"""
+    zincrby(key, field, member)
+
+Increment the score of a member in a sorted set.
+"""
+zincrby(key, field, increment; client=get_global_client()) = execute(["ZINCRBY", key, field, increment], client)

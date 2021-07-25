@@ -1,7 +1,8 @@
 """
-    Client([; host="127.0.0.1", port=6379, database=0, password="", username=""]) -> Client
+    Client([; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing]) -> Client
 
-Creates a Client instance connecting and authenticating with a Redis host.
+Creates a Client instance connecting and authenticating to a Redis host, provide an `MbedTLS.SSLConfig` 
+(see `get_ssl_config`) for a secured Redis connection (SSL/TLS).
 
 # Attributes
 - `host::AbstractString`: Redis host.
@@ -9,7 +10,9 @@ Creates a Client instance connecting and authenticating with a Redis host.
 - `database::Integer`: Redis database index.
 - `password::AbstractString`: Redis password if any.
 - `username::AbstractString`: Redis username if any.
-- `socket::TCPSocket`: Socket used for sending and reveiving from Redis host.
+- `socket::Union{TCPSocket,MbedTLS.SSLContext}`: Socket used for sending and reveiving from Redis host.
+- `lock::Base.AbstractLock`: Lock for atomic reads and writes from client socket.
+- `ssl_config::Union{MbedTLS.SSLConfig,Nothing}`: Optional ssl config for secured redis connection.
 - `is_subscribed::Bool`: Whether this Client is actively subscribed to any channels or patterns.
 - `subscriptions::AbstractSet{<:AbstractString}`: Set of channels currently subscribed on.
 - `psubscriptions::AbstractSet{<:AbstractString}`: Set of patterns currently psubscribed on.
@@ -19,6 +22,7 @@ Creates a Client instance connecting and authenticating with a Redis host.
 client istance is constructed, even with `SELECT` or `CONFIG SET` commands.
 
 # Examples
+Basic connection:
 ```julia-repl
 julia> client = Client();
 
@@ -31,6 +35,13 @@ julia> get("key"; client=client)
 julia> execute(["DEL", "key"], client)
 1
 ```
+
+SSL/TLS connection:
+```julia-repl
+julia> ssl_config = get_ssl_config(ssl_certfile="redis.crt", ssl_keyfile="redis.key", ssl_ca_certs="ca.crt");
+
+julia> client = Client(ssl_config=ssl_config);
+```
 """
 mutable struct Client
     host::AbstractString
@@ -38,17 +49,74 @@ mutable struct Client
     database::Integer
     password::AbstractString
     username::AbstractString
-    socket::TCPSocket
+    socket::Union{TCPSocket,MbedTLS.SSLContext}
+    lock::Base.AbstractLock
+    ssl_config::Union{MbedTLS.SSLConfig,Nothing}
     is_subscribed::Bool
     subscriptions::AbstractSet{<:AbstractString}
     psubscriptions::AbstractSet{<:AbstractString}
 end
 
-function Client(; host="127.0.0.1", port=6379, database=0, password="", username="")
-    client = Client(host, port, database, password, username, connect(host, port), false, Set{String}(), Set{String}())
+function Client(; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing)
+    if isnothing(ssl_config)
+        socket = connect(host, port)
+    else
+        socket = ssl_connect(host, port, ssl_config)
+    end
+    
+    client = Client(
+        host,
+        port,
+        database,
+        password,
+        username,
+        socket,
+        ReentrantLock(),
+        ssl_config,
+        false,
+        Set{String}(),
+        Set{String}()
+    )
+
     !isempty(password * username) && auth(password, username; client=client)
     database != 0 && select(database; client=client)
+
     return client
+end
+
+"""
+    get_ssl_config(; ssl_certfile::AbstractString, ssl_keyfile::AbstractString, ssl_ca_certs::AbstractString) -> MbedTLS.SSLConfig
+
+Loads ssl cert, key and ca cert files from provided directories into MbedTLS.SSLConfig object.
+
+# Examples
+```julia-repl
+julia> ssl_config = get_ssl_config(ssl_certfile="redis.crt", ssl_keyfile="redis.key", ssl_ca_certs="ca.crt");
+```
+"""
+function get_ssl_config(; ssl_certfile::AbstractString, ssl_keyfile::AbstractString, ssl_ca_certs::AbstractString)
+    ssl_config = MbedTLS.SSLConfig(false)
+    cert = MbedTLS.crt_parse_file(ssl_certfile)
+    key = MbedTLS.parse_keyfile(ssl_keyfile)
+    MbedTLS.own_cert!(ssl_config, cert, key)
+    ca_certs = MbedTLS.crt_parse_file(ssl_ca_certs)
+    MbedTLS.ca_chain!(ssl_config, ca_certs)
+    return ssl_config
+end
+
+"""
+    ssl_connect(host::AbstractString, port::Integer, ssl_config::MbedTLS.SSLConfig) -> MbedTLS.SSLContext
+
+Connects to the redis host and port, returns a socket connection with ssl context.
+"""
+function ssl_connect(host::AbstractString, port::Integer, ssl_config::MbedTLS.SSLConfig)
+    tcp = connect(host, port)
+    io = MbedTLS.SSLContext()
+    MbedTLS.setup!(io, ssl_config)
+    MbedTLS.associate!(io, tcp)
+    MbedTLS.hostname!(io, host)
+    MbedTLS.handshake!(io)
+    return io
 end
 
 """
@@ -60,7 +128,7 @@ const GLOBAL_CLIENT = Ref{Client}()
 
 """
     set_global_client(client::Client)
-    set_global_client([; host="127.0.0.1", port=6379, database=0, password="", username=""])
+    set_global_client([; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing])
 
 Sets a Client object as the `GLOBAL_CLIENT[]` instance.
 """
@@ -68,8 +136,8 @@ function set_global_client(client::Client)
     GLOBAL_CLIENT[] = client
 end
 
-function set_global_client(; host="127.0.0.1", port=6379, database=0, password="", username="")
-    client = Client(; host=host, port=port, database=database, password=password, username=username)
+function set_global_client(; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing)
+    client = Client(; host=host, port=port, database=database, password=password, username=username,  ssl_config=ssl_config)
     set_global_client(client)
 end
 
@@ -93,7 +161,14 @@ end
 Creates a new Client instance, copying the connection parameters of the input.
 """
 function Base.copy(client::Client)
-    return Client(; host=client.host, port=client.port, database=client.database, password=client.password, username=client.username)
+    return Client(;
+        host=client.host,
+        port=client.port,
+        database=client.database,
+        password=client.password,
+        username=client.username,
+        ssl_config=client.ssl_config
+    )
 end
 
 """
@@ -112,9 +187,17 @@ Reconnects the input client socket connection.
 """
 function reconnect!(client::Client)
     disconnect!(client)
-    client.socket = connect(client.host, client.port)
+
+    if isnothing(client.ssl_config)
+        new_socket = connect(client.host, client.port)
+    else
+        new_socket = ssl_connect(connect(client.host, client.port), client.host, client.ssl_config)
+    end
+
+    client.socket = new_socket
     !isempty(client.password * client.username) && auth(client.password, client.username; client=client)
     client.database != 0 && select(client.database; client=client)
+
     return client
 end
 

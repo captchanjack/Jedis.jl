@@ -74,9 +74,9 @@ function subscribe(fn::Function, channel, channels...; stop_fn::Function=(msg) -
         throw(RedisError("SUBERROR", "Cannot open multiple subscriptions in the same Client instance"))
     end
     
-    @lock client.socket.lock client.subscriptions = Set([channel, channels...])
+    @lock client.lock client.subscriptions = Set([channel, channels...])
     execute(["SUBSCRIBE", client.subscriptions...], client)
-    @lock client.socket.lock set_subscribed!(client)
+    @lock client.lock set_subscribed!(client)
     yield()
     try
         while true
@@ -88,9 +88,9 @@ function subscribe(fn::Function, channel, channels...; stop_fn::Function=(msg) -
                 
             elseif type == "unsubscribe"
                 if isnothing(chnl)
-                    @lock client.socket.lock client.subscriptions = Set{String}()
+                    @lock client.lock client.subscriptions = Set{String}()
                 elseif chnl in client.subscriptions
-                    @lock client.socket.lock delete!(client.subscriptions, chnl)
+                    @lock client.lock delete!(client.subscriptions, chnl)
                 end
                 
                 isempty(client.subscriptions) && break
@@ -101,10 +101,10 @@ function subscribe(fn::Function, channel, channels...; stop_fn::Function=(msg) -
     finally
         if !isempty(client.subscriptions)
             unsubscribe(client.subscriptions...; client=client)
-            @lock client.socket.lock client.subscriptions = Set{String}()
-            @lock client.socket.lock flush!(client)
+            @lock client.lock client.subscriptions = Set{String}()
+            @lock client.lock flush!(client)
         end
-        @lock client.socket.lock set_unsubscribed!(client)
+        @lock client.lock set_unsubscribed!(client)
     end
 end
 
@@ -185,9 +185,9 @@ function psubscribe(fn::Function, pattern, patterns...; stop_fn::Function=(msg) 
         throw(RedisError("SUBERROR", "Cannot open multiple subscriptions in the same Client instance"))
     end
 
-    @lock client.socket.lock client.psubscriptions = Set([pattern, patterns...])
+    @lock client.lock client.psubscriptions = Set([pattern, patterns...])
     execute(["PSUBSCRIBE", client.psubscriptions...], client)
-    @lock client.socket.lock set_subscribed!(client)
+    @lock client.lock set_subscribed!(client)
 
     try
         while true
@@ -199,9 +199,9 @@ function psubscribe(fn::Function, pattern, patterns...; stop_fn::Function=(msg) 
 
             elseif type == "punsubscribe"
                 if isnothing(pttrn)
-                    @lock client.socket.lock client.psubscriptions = Set{String}()
+                    @lock client.lock client.psubscriptions = Set{String}()
                 elseif pttrn in client.psubscriptions
-                    @lock client.socket.lock delete!(client.psubscriptions, pttrn)
+                    @lock client.lock delete!(client.psubscriptions, pttrn)
                 end
 
                 isempty(client.psubscriptions) && break
@@ -212,10 +212,10 @@ function psubscribe(fn::Function, pattern, patterns...; stop_fn::Function=(msg) 
     finally
         if !isempty(client.psubscriptions)
             punsubscribe(client.psubscriptions...; client=client)
-            @lock client.socket.lock client.psubscriptions = Set{String}()
-            @lock client.socket.lock flush!(client)
+            @lock client.lock client.psubscriptions = Set{String}()
+            @lock client.lock flush!(client)
         end
-        @lock client.socket.lock set_unsubscribed!(client)
+        @lock client.lock set_unsubscribed!(client)
     end
 end
 

@@ -26,11 +26,11 @@ jobs:
         arch:
           - x64
     steps:
+      - uses: actions/checkout@v2
       - uses: docker-practice/actions-setup-docker@master
       - run: |
-          echo "Running redis server with docker"
-          docker run --name redis -d -p 6379:6379 -e ALLOW_EMPTY_PASSWORD=yes bitnami/redis:6.2.3
-      - uses: actions/checkout@v2
+          echo "Running redis server with docker-compose"
+          docker-compose -f docker/docker-compose.yml up -d
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.version }}
@@ -53,6 +53,5 @@ jobs:
           file: lcov.info
       - run: |
           echo "Cleaning up docker"
-          docker stop redis
-          docker rm redis
+          docker-compose -f docker/docker-compose.yml down --remove-orphans
           docker image rm bitnami/redis:6.2.3

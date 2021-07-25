@@ -1,7 +1,6 @@
 .PHONY: test
 test:
-	@docker run --name redis -d -p 6379:6379 -e ALLOW_EMPTY_PASSWORD=yes bitnami/redis:6.2.3
+	@docker-compose -f docker/docker-compose.yml up -d
 	@julia -e "using Pkg; Pkg.test()"
-	@docker stop redis
-	@docker rm redis
+	@docker-compose -f docker/docker-compose.yml down --remove-orphans
 	@docker image rm bitnami/redis:6.2.3

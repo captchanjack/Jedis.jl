@@ -2,6 +2,8 @@
 
 ```@docs
 Client
+get_ssl_config
+Jedis.ssl_connect
 execute(command::AbstractArray, client::Client)
 Jedis.GLOBAL_CLIENT
 set_global_client

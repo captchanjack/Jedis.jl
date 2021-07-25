@@ -9,3 +9,4 @@ This client supports:
 - **[Pipelining](https://captchanjack.github.io/Jedis.jl/pipeline/)**
 - **[Transactions](https://captchanjack.github.io/Jedis.jl/commands/#Jedis.multi)**
 - **[Pub/Sub](https://captchanjack.github.io/Jedis.jl/pubsub/)**
+- Support for secured Redis connection (SSL/TLS)

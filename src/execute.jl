@@ -17,7 +17,7 @@ function execute(command::AbstractArray, client::Client=get_global_client())
         throw(RedisError("SUBERROR", "Cannot execute commands while a subscription is open in the same Client instance"))
     end
 
-    @lock client.socket.lock begin
+    @lock client.lock begin
         flush!(client)
         write(client.socket, resp(command))
         msg = recv(client.socket)
@@ -39,7 +39,7 @@ end
 Sends a RESP compliant command to the Redis host without reading the returned result.
 """
 function execute_without_recv(command::AbstractArray, client::Client=get_global_client())
-    @lock client.socket.lock begin
+    @lock client.lock begin
         flush!(client)
         write(client.socket, resp(command))
         return
@@ -110,7 +110,7 @@ function execute(pipe::Pipeline; filter_multi_exec=true)
         throw(RedisError("SUBERROR", "Cannot execute Pipeline while a subscription is open in the same Client instance"))
     end
 
-    @lock pipe.client.socket.lock begin
+    @lock pipe.client.lock begin
         try
             flush!(pipe.client)
             write(pipe.client.socket, pipe.resp)

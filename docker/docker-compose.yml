@@ -1,0 +1,34 @@
+version: '3.7'
+
+services:
+  redis:
+    image: bitnami/redis:6.2.3
+    container_name: redis
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    entrypoint: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    ports:
+      - 6379:6379
+    network_mode: bridge
+  redis-ssl:
+    image: bitnami/redis:6.2.3
+    container_name: redis-ssl
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+      - ./ssl/:/usr/local/etc/redis/ssl/
+    entrypoint: [
+      "redis-server",
+      "/usr/local/etc/redis/redis.conf",
+      "--tls-port 6379",
+      "--port 0",
+      "--tls-cert-file /usr/local/etc/redis/ssl/redis.crt",
+      "--tls-key-file /usr/local/etc/redis/ssl/redis.key",
+      "--tls-ca-cert-file /usr/local/etc/redis/ssl/ca.crt"
+    ]
+    ports:
+      - 6380:6379
+    network_mode: bridge

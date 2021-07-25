@@ -52,18 +52,18 @@ function handle_error(_, x)
     return RedisError(err_type, err_msg)
 end
 
-function handle_bulk_string(s, x)
+function handle_bulk_string(io, x)
     if x == "-1"
         return nothing
     end
-    return readline(s)
+    return readline(io)
 end
 
-function handle_array(s, x)
+function handle_array(io, x)
     if x == "0"
         return []
     end
-    return [recv(s) for _ in 1:parse(Int64, x)]
+    return [recv(io) for _ in 1:parse(Int64, x)]
 end
 
 const RESPHandler = Dict{Char,Function}(
@@ -75,17 +75,27 @@ const RESPHandler = Dict{Char,Function}(
 )
 
 """
-    recv(s::TCPSocket)
+    recv(io::Union{TCPSocket,Base.GenericIOBuffer})
 
-Reads any bytes before the next CRLF (\r\n) in a TCPScoket, blocks if no bytes available.
+Reads any bytes before next CRLF (\r\n) in a TCPScoket or IOBuffer, blocks if no bytes available.
 """
-function recv(s::TCPSocket)
-    line = readline(s)
+function recv(io::Union{TCPSocket,Base.GenericIOBuffer})
+    line = readline(io)
 
     if isempty(line)
         return nothing
     end
 
     handler = RESPHandler[line[1]]
-    return handler(s, line[2:end])
+    return handler(io, line[2:end])
+end
+
+"""
+    recv(io::MbedTLS.SSLContext)
+
+Copies all available decrypted bytes from an MbedTLS.SSLContext into an IOBuffer, then reads line by line.
+"""
+function recv(io::MbedTLS.SSLContext)
+    MbedTLS.wait_for_decrypted_data(io)
+    return recv(IOBuffer(readavailable(io)))
 end

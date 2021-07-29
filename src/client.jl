@@ -85,7 +85,7 @@ function Client(; host="127.0.0.1", port=6379, database=0, password="", username
 end
 
 """
-    get_ssl_config(; ssl_certfile::AbstractString, ssl_keyfile::AbstractString, ssl_ca_certs::AbstractString) -> MbedTLS.SSLConfig
+    get_ssl_config([; ssl_certfile=nothing, ssl_keyfile=nothing, ssl_ca_certs=nothing]) -> MbedTLS.SSLConfig
 
 Loads ssl cert, key and ca cert files from provided directories into MbedTLS.SSLConfig object.
 
@@ -94,13 +94,20 @@ Loads ssl cert, key and ca cert files from provided directories into MbedTLS.SSL
 julia> ssl_config = get_ssl_config(ssl_certfile="redis.crt", ssl_keyfile="redis.key", ssl_ca_certs="ca.crt");
 ```
 """
-function get_ssl_config(; ssl_certfile::AbstractString, ssl_keyfile::AbstractString, ssl_ca_certs::AbstractString)
+function get_ssl_config(; ssl_certfile=nothing, ssl_keyfile=nothing, ssl_ca_certs=nothing)
     ssl_config = MbedTLS.SSLConfig(false)
-    cert = MbedTLS.crt_parse_file(ssl_certfile)
-    key = MbedTLS.parse_keyfile(ssl_keyfile)
-    MbedTLS.own_cert!(ssl_config, cert, key)
-    ca_certs = MbedTLS.crt_parse_file(ssl_ca_certs)
-    MbedTLS.ca_chain!(ssl_config, ca_certs)
+
+    if !isnothing(ssl_certfile) && !isnothing(ssl_keyfile)
+        cert = MbedTLS.crt_parse_file(ssl_certfile)
+        key = MbedTLS.parse_keyfile(ssl_keyfile)
+        MbedTLS.own_cert!(ssl_config, cert, key)
+    end
+
+    if !isnothing(ssl_ca_certs)
+        ca_certs = MbedTLS.crt_parse_file(ssl_ca_certs)
+        MbedTLS.ca_chain!(ssl_config, ca_certs)
+    end
+    
     return ssl_config
 end
 

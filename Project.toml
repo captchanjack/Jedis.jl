@@ -1,12 +1,13 @@
 name = "Jedis"
 uuid = "b89ccfe0-2c5f-46f6-b89b-da3e1c2e286f"
 authors = ["Jack Chan <j.chan2504@gmail.com>"]
-version = "0.2.1"
+version = "0.2.2"
 
 [deps]
 MbedTLS = "739be429-bea8-5141-9913-cc70e7f3736d"
 Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
+UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
-julia = "^1"
 MbedTLS = "1.0.3"
+julia = "^1"

@@ -9,7 +9,8 @@ makedocs(
         "Client" => "client.md",
         "Commands" => "commands.md",
         "Pipelining" => "pipeline.md",
-        "Pub/Sub" => "pubsub.md"
+        "Pub/Sub" => "pubsub.md",
+        "Locks" => "lock.md"
     ],
     modules=[Jedis]
 )

@@ -8,7 +8,10 @@ end
 
 @testset "GET SET" begin
     @test set("key", "value") == "OK"
+    @test setnx("key", "value") == 0
     @test get("key") == "value"
+    @test del("key") == 1
+    @test setnx("key", "value") == 1
     @test flushdb() == "OK" && isnothing(get("key"))
 end
 

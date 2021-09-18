@@ -48,6 +48,13 @@ Set the string value of a key.
 set(key, value; client=get_global_client()) = execute(["SET", key, value], client)
 
 """
+    setnx(key, value)
+
+Set the value of a key, only if the key does not exist.
+"""
+setnx(key, value; client=get_global_client()) = execute(["SETNX", key, value], client)
+
+"""
     get(key)
 
 Get the value of a key.

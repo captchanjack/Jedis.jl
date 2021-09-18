@@ -9,3 +9,5 @@ This client supports:
 - **[Pipelining](https://captchanjack.github.io/Jedis.jl/pipeline/)**
 - **[Transactions](https://captchanjack.github.io/Jedis.jl/commands/#Jedis.multi)**
 - **[Pub/Sub](https://captchanjack.github.io/Jedis.jl/pubsub/)**
+- **[Redis locks](https://captchanjack.github.io/Jedis.jl/lock/)**
+- Support for secured Redis connection (**[SSL/TLS](https://captchanjack.github.io/Jedis.jl/client/#Jedis.get_ssl_config/)**)

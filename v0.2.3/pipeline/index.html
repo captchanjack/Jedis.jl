@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Pipelining · Jedis.jl Documentation</title><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Jedis.jl Documentation</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../client/">Client</a></li><li><a class="tocitem" href="../commands/">Commands</a></li><li class="is-active"><a class="tocitem" href>Pipelining</a></li><li><a class="tocitem" href="../pubsub/">Pub/Sub</a></li><li><a class="tocitem" href="../lock/">Locks</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Pipelining</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Pipelining</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/captchanjack/Jedis.jl/blob/master/docs/src/pipeline.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Pipelining"><a class="docs-heading-anchor" href="#Pipelining">Pipelining</a><a id="Pipelining-1"></a><a class="docs-heading-anchor-permalink" href="#Pipelining" title="Permalink"></a></h1><article class="docstring"><header><a class="docstring-binding" id="Jedis.Pipeline" href="#Jedis.Pipeline"><code>Jedis.Pipeline</code></a> — <span class="docstring-category">Type</span></header><section><div><p>Pipeline([client::Client=get<em>global</em>client()]) -&gt; Pipeline</p><p>Creates a Pipeline client instance for executing commands in batch.</p><p><strong>Attributes</strong></p><ul><li><code>client::Client</code>: Reference to the underlying Client connection.</li><li><code>resp::AbstractString</code>: Batched commands converted to RESP compliant string.</li><li><code>n_commands::Integer</code>: Number of commands currenrtly in the pipeline.</li><li><code>multi_exec::Bool</code>: Used to track and filter MULTI/EXEC transactions.</li><li><code>multi_exec_bitmask::AbstractArray{Bool}</code>: Used to track and filter MULTI/EXEC transactions.</li></ul><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; pipe = Pipeline();
+
+julia&gt; set(&quot;key&quot;, &quot;value&quot;; client=pipe);
+
+julia&gt; get(&quot;key&quot;; client=pipe);
+
+julia&gt; execute(pipe)
+2-element Array{String,1}:
+ &quot;OK&quot;
+ &quot;value&quot;</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/captchanjack/Jedis.jl/blob/57e518ce40a5a2a08fb7abe4447b9948bba5e8dd/src/pipeline.jl#L1-L26">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Jedis.add!" href="#Jedis.add!"><code>Jedis.add!</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">add!(pipe::Pipeline, command)</code></pre><p>Add a RESP compliant command to a pipeline client.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/captchanjack/Jedis.jl/blob/57e518ce40a5a2a08fb7abe4447b9948bba5e8dd/src/pipeline.jl#L37-L41">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Jedis.execute-Tuple{AbstractArray,Pipeline}" href="#Jedis.execute-Tuple{AbstractArray,Pipeline}"><code>Jedis.execute</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia hljs">execute(command, pipe::Pipeline)</code></pre><p>Add a RESP compliant command to a pipeline client.</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; pipe = Pipeline();
+
+julia&gt; execute([&quot;SET&quot;, &quot;key&quot;, &quot;value&quot;]; client=pipe);
+
+julia&gt; execute([&quot;GET&quot;, &quot;key&quot;]; client=pipe);
+
+julia&gt; execute(pipe)
+2-element Array{String,1}:
+ &quot;OK&quot;
+ &quot;value&quot;</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/captchanjack/Jedis.jl/blob/57e518ce40a5a2a08fb7abe4447b9948bba5e8dd/src/execute.jl#L52-L70">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Jedis.execute-Tuple{Pipeline}" href="#Jedis.execute-Tuple{Pipeline}"><code>Jedis.execute</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia hljs">execute(pipe::Pipeline[; filter_multi_exec=true])</code></pre><p>Execute commands batched in a pipeline client, optionally filter out MULTI transaction responses before the EXEC call, e.g. &quot;QUEUED&quot;.</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; pipe = Pipeline();
+
+julia&gt; set(&quot;key&quot;, &quot;value&quot;; client=pipe);
+
+julia&gt; get(&quot;key&quot;; client=pipe);
+
+julia&gt; multi(; client=pipe);
+
+julia&gt; get(&quot;key&quot;; client=pipe);
+
+julia&gt; get(&quot;key&quot;; client=pipe);
+
+julia&gt; exec(; client=pipe);
+
+julia&gt; execute(pipe)
+2-element Array{String,1}:
+ &quot;OK&quot;
+ &quot;value&quot;
+ [&quot;value&quot;, &quot;value&quot;]  # Only the response from final exec() call is returned</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/captchanjack/Jedis.jl/blob/57e518ce40a5a2a08fb7abe4447b9948bba5e8dd/src/execute.jl#L79-L107">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Base.pipeline" href="#Base.pipeline"><code>Base.pipeline</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">pipeline(fn::Function[; clientt=get_global_client(), filter_multi_exec=true])</code></pre><p>Execute commands batched in a pipeline client in a do block, optionally filter out MULTI transaction  responses before the EXEC call, e.g. &quot;QUEUED&quot;.</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; pipeline() do pipe
+           lpush(&quot;example&quot;, 1, 2, 3, 4; client=pipe)
+           lpop(&quot;example&quot;; client=pipe)
+           rpop(&quot;example&quot;; client=pipe)
+           multi_exec(; client=pipe) do
+               lpop(&quot;example&quot;; client=pipe)
+               rpop(&quot;example&quot;; client=pipe)
+           end
+           lpop(&quot;example&quot;; client=pipe)
+       end
+5-element Array{Any,1}:
+ 4  # Integer response from lpush
+ &quot;4&quot;  # String response from lpop
+ &quot;1&quot;  # String response from rpop
+ [&quot;3&quot;, &quot;2&quot;]  # Array of String response from multi_exec do block, with responeses before the exec call filtered out
+ nothing  # Nil response from final lpop</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/captchanjack/Jedis.jl/blob/57e518ce40a5a2a08fb7abe4447b9948bba5e8dd/src/pipeline.jl#L72-L97">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../commands/">« Commands</a><a class="docs-footer-nextpage" href="../pubsub/">Pub/Sub »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.6 on <span class="colophon-date" title="Sunday 19 September 2021 02:49">Sunday 19 September 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

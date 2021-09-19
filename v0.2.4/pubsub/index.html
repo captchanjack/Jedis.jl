@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Pub/Sub · Jedis.jl Documentation</title><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Jedis.jl Documentation</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../client/">Client</a></li><li><a class="tocitem" href="../commands/">Commands</a></li><li><a class="tocitem" href="../pipeline/">Pipelining</a></li><li class="is-active"><a class="tocitem" href>Pub/Sub</a></li><li><a class="tocitem" href="../lock/">Locks</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Pub/Sub</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Pub/Sub</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/captchanjack/Jedis.jl/blob/master/docs/src/pubsub.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Pub/Sub"><a class="docs-heading-anchor" href="#Pub/Sub">Pub/Sub</a><a id="Pub/Sub-1"></a><a class="docs-heading-anchor-permalink" href="#Pub/Sub" title="Permalink"></a></h1><article class="docstring"><header><a class="docstring-binding" id="Jedis.publish" href="#Jedis.publish"><code>Jedis.publish</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">publish(channel, message)</code></pre><p>Post a message to a channel.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/captchanjack/Jedis.jl/blob/8c5d8172197dd0fd5888cf85d506bfe0cd228cd1/src/pubsub.jl#L1-L5">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Jedis.subscribe" href="#Jedis.subscribe"><code>Jedis.subscribe</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">subscribe(fn::Function,
+          channel,
+          channels...;
+          stop_fn::Function=(msg) -&gt; false,
+          err_cb::Function=(err) -&gt; log_error(err))</code></pre><p>Listen for messages published to the given channels in a do block. Optionally provide a stop  function <code>stop_fn(msg)</code> which gets run as a callback everytime a subscription message is received,  the subscription loop breaks if the <code>stop_fn</code> returns <code>true</code>. Optionally provide <code>err_cb(err)</code>  function which gets run on encountering an exception in the main subscription loop.</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; channels = [&quot;first&quot;, &quot;second&quot;];
+
+julia&gt; publisher = Client();
+
+julia&gt; subscriber = Client();
+
+julia&gt; stop_fn(msg) = msg[end] == &quot;close subscription&quot;;  # stop the subscription loop if the message matches
+
+julia&gt; messages = [];
+
+julia&gt; @async subscribe(channels...; stop_fn=stop_fn, client=subscriber) do msg
+           push!(messages, msg)
+       end;  # Without @async this function will block, alternatively use Thread.@spawn
+
+julia&gt; wait_until_subscribed(subscriber);
+
+julia&gt; subscriber.is_subscribed
+true
+
+julia&gt; subscriber.subscriptions
+Set{String} with 2 elements:
+  &quot;second&quot;
+  &quot;first&quot;
+
+julia&gt; publish(&quot;first&quot;, &quot;hello&quot;; client=publisher);
+
+julia&gt; publish(&quot;second&quot;, &quot;world&quot;; client=publisher);
+
+julia&gt; println(messages)
+Any[[&quot;message&quot;, &quot;first&quot;, &quot;hello&quot;], [&quot;message&quot;, &quot;second&quot;, &quot;world&quot;]]  # message has the format [&lt;message type&gt;, &lt;channel&gt;, &lt;actual message&gt;]
+
+julia&gt; unsubscribe(&quot;first&quot;; client=subscriber);
+
+julia&gt; wait_until_channel_unsubscribed(subscriber, &quot;first&quot;);
+
+julia&gt; subscriber.subscriptions
+Set{String} with 1 element:
+  &quot;second&quot;
+
+julia&gt; unsubscribe(; client=subscriber);  # unsubscribe from all channels
+
+julia&gt; wait_until_unsubscribed(subscriber);
+
+julia&gt; subscriber.is_subscribed
+false
+
+julia&gt; subscriber.subscriptions
+Set{String}()</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/captchanjack/Jedis.jl/blob/8c5d8172197dd0fd5888cf85d506bfe0cd228cd1/src/pubsub.jl#L8-L71">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Jedis.unsubscribe" href="#Jedis.unsubscribe"><code>Jedis.unsubscribe</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">unsubscribe([channels...]) -&gt; nothing</code></pre><p>Unsubscribes the client from the given channels, or from all of them if none is given.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/captchanjack/Jedis.jl/blob/8c5d8172197dd0fd5888cf85d506bfe0cd228cd1/src/pubsub.jl#L111-L115">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Jedis.psubscribe" href="#Jedis.psubscribe"><code>Jedis.psubscribe</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">psubscribe(fn::Function,
+           pattern,
+           patterns...;
+           stop_fn::Function=(msg) -&gt; false,
+           err_cb::Function=(err) -&gt; log_error(err))</code></pre><p>Listen for messages published to the given channels matching ghe given patterns in a do block. Optionally provide a stop function <code>stop_fn(msg)</code> which gets run as a callback everytime a  subscription message is received, the subscription loop breaks if the <code>stop_fn</code> returns <code>true</code>.  Optionally provide <code>err_cb(err)</code> function which gets run on encountering an exception in the main  subscription loop.</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; patterns = [&quot;first*&quot;, &quot;second*&quot;];
+
+julia&gt; publisher = Client();
+
+julia&gt; subscriber = Client();
+
+julia&gt; stop_fn(msg) = msg[end] == &quot;close subscription&quot;;  # stop the subscription loop if the message matches
+
+julia&gt; messages = [];
+
+julia&gt; @async psubscribe(patterns...; stop_fn=stop_fn, client=subscriber) do msg
+           push!(messages, msg)
+       end;  # Without @async this function will block, alternatively use Thread.@spawn
+
+julia&gt; wait_until_subscribed(subscriber);
+
+julia&gt; subscriber.is_subscribed
+true
+
+julia&gt; subscriber.psubscriptions
+Set{String} with 2 elements:
+  &quot;first*&quot;
+  &quot;second*&quot;
+
+julia&gt; publish(&quot;first_pattern&quot;, &quot;hello&quot;; client=publisher);
+
+julia&gt; publish(&quot;second_pattern&quot;, &quot;world&quot;; client=publisher);
+
+julia&gt; println(messages)
+Any[[&quot;pmessage&quot;, &quot;first*&quot;, &quot;first_pattern&quot;, &quot;hello&quot;], [&quot;pmessage&quot;, &quot;second*&quot;, &quot;second_pattern&quot;, &quot;world&quot;]]  # message has the format [&lt;message type&gt;, &lt;pattern&gt;, &lt;channel&gt;, &lt;actual message&gt;]
+
+julia&gt; punsubscribe(&quot;first*&quot;; client=subscriber);
+
+julia&gt; wait_until_pattern_unsubscribed(subscriber, &quot;first*&quot;);
+
+julia&gt; subscriber.psubscriptions
+Set{String} with 1 element:
+  &quot;second*&quot;
+
+julia&gt; punsubscribe(; client=subscriber);  # unsubscribe from all patterns
+
+julia&gt; wait_until_unsubscribed(subscriber);
+
+julia&gt; subscriber.is_subscribed
+false
+
+julia&gt; subscriber.psubscriptions
+Set{String}()</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/captchanjack/Jedis.jl/blob/8c5d8172197dd0fd5888cf85d506bfe0cd228cd1/src/pubsub.jl#L118-L182">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="Jedis.punsubscribe" href="#Jedis.punsubscribe"><code>Jedis.punsubscribe</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">unsubscribe([channels...]) -&gt; nothing</code></pre><p>Unsubscribes the client from the given patterns, or from all of them if none is given.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/captchanjack/Jedis.jl/blob/8c5d8172197dd0fd5888cf85d506bfe0cd228cd1/src/pubsub.jl#L222-L226">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../pipeline/">« Pipelining</a><a class="docs-footer-nextpage" href="../lock/">Locks »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.6 on <span class="colophon-date" title="Sunday 19 September 2021 03:25">Sunday 19 September 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

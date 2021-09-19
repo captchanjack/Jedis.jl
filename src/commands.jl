@@ -86,8 +86,11 @@ hexists(key, field; client=get_global_client()) = execute(["HEXISTS", key, field
     keys(pattern)
 
 Find all keys matching the pattern.
+
+!!! compat "Julia 1.6"
+    `Jedis.keys` is not exported as the interface conflicts with `Base.keys`.
 """
-Base.keys(pattern; client=get_global_client()) = execute(["KEYS", pattern], client)
+keys(pattern; client=get_global_client()) = execute(["KEYS", pattern], client)
 
 """
     hkeys(key)

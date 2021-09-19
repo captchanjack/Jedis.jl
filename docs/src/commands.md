@@ -20,7 +20,7 @@ Jedis.get
 del
 exists
 hexists
-keys
+Jedis.keys
 hkeys
 setex
 expire

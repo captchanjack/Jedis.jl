@@ -85,6 +85,10 @@ julia> @async redis_lock("example_lock") do
            sleep(3)  # Lock will exist for 3 seconds
        end
 
+julia> while !isredislocked("example_lock")
+           sleep(0.1)  # Ensure async lock is active before proceeding
+       end
+
 julia> redis_lock("example_lock") do
            println("This message will be delayed by 3 seconds!")  # Blocked by first lock
        end

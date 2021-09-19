@@ -5,14 +5,13 @@ A lightweight Redis client, implemented in Julia.
 Links to detailed interfaces and documentation:
 - Basic **[command execution](https://captchanjack.github.io/Jedis.jl/commands/)**
 - Executing commands with a **[global client](https://captchanjack.github.io/Jedis.jl/client/)** instance
-- Executing commands atomically per client instance, with the help of socket locks
 - **[Pipelining](https://captchanjack.github.io/Jedis.jl/pipeline/)**
 - **[Transactions](https://captchanjack.github.io/Jedis.jl/commands/#Jedis.multi)**
 - **[Pub/Sub](https://captchanjack.github.io/Jedis.jl/pubsub/)**
 - **[Redis locks](https://captchanjack.github.io/Jedis.jl/lock/)**
 - Support for secured Redis connection (**[SSL/TLS](https://captchanjack.github.io/Jedis.jl/client/#Jedis.get_ssl_config/)**)
 
-## Basic Usage
+## Usage
 Establishing a basic **[client](https://captchanjack.github.io/Jedis.jl/client/)** connection:
 ```
 client = Client(host="localhost", port=6379)
@@ -86,7 +85,7 @@ results = pipeline() do pipe
 end
 ```
 
-Using Redis **[Pub/Sub](https://captchanjack.github.io/Jedis.jl/pubsub/)**:
+Using Redis **[Pub/Sub](https://captchanjack.github.io/Jedis.jl/pubsub/)** (interfaces for `subscribe` and `psubscribe` are the same):
 ```
 # Set up channels, publisher and subscriber clients
 channels = ["first", "second"]
@@ -118,4 +117,18 @@ wait_until_unsubscribed(subscriber)
 subscriber.is_subscribed  # outputs false
 subscriber.subscriptions  # set of actively subscribed channels should be empty
 ```
-Interfaces for `subscribe` and `psubscribe` are the same.
+
+Using **[redis locks](https://captchanjack.github.io/Jedis.jl/lock/)** for performing atomic operations:
+```
+@async redis_lock("example_lock") do
+    sleep(3)  # Lock will exist for 3 seconds
+end
+
+while !isredislocked("example_lock")
+    sleep(0.1)  # Ensure async lock is active before proceeding
+end
+
+redis_lock("example_lock") do
+    println("This message will be delayed by 3 seconds!")  # Blocked by first lock
+end
+```

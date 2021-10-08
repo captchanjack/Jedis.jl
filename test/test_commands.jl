@@ -77,7 +77,7 @@ end
     flushall()
 end
 
-@testset "QUIT" begin
-    @test quit() == "OK"
-    @test_throws Base.IOError ping()
-end
+# @testset "QUIT" begin
+#     @test quit() == "OK"
+#     @test_throws Base.IOError ping()
+# end

@@ -2,14 +2,14 @@ set_global_client()
 
 @testset "Pipeline - Basic" begin
     pipe = Pipeline()
-    @test pipe.n_commands == 0
+    @test length(pipe.resp) == 0
     for _ in 1:1000
         lrange("nothing", 0, -1; client=pipe)
     end
-    @test pipe.n_commands == 1000
+    @test length(pipe.resp) == 1000
     result = execute(pipe)
     @test result == fill([], 1000)
-    @test pipe.n_commands == 0
+    @test length(pipe.resp) == 0
 end
 
 @testset "Pipeline - Do Block" begin
@@ -34,7 +34,7 @@ end
     @test no_filter_result[2:length(no_filter_result)-1] == fill("QUEUED", 1000)
     @test no_filter_result[end] == fill([], 1000)
 
-    filter_result = pipeline() do pipe
+    filter_result = pipeline(; filter_multi_exec=true) do pipe
         multi_exec(; client=pipe) do
             for _ in 1:1000
                 lrange("nothing", 0, -1; client=pipe)

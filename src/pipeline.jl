@@ -1,14 +1,14 @@
 """
-Pipeline([client::Client=get_global_client()]) -> Pipeline
+    Pipeline([client::Client=get_global_client(); filter_multi_exec::Bool=false]) -> Pipeline
 
 Creates a Pipeline client instance for executing commands in batch.
 
 # Attributes
 - `client::Client`: Reference to the underlying Client connection.
-- `resp::AbstractString`: Batched commands converted to RESP compliant string.
-- `n_commands::Integer`: Number of commands currenrtly in the pipeline.
+- `resp::Vector{String}`: Batched commands converted to RESP compliant string.
+- `filter_multi_exec::Bool`: Set `true` to filter out QUEUED responses in a MULTI/EXEC transaction.
 - `multi_exec::Bool`: Used to track and filter MULTI/EXEC transactions.
-- `multi_exec_bitmask::AbstractArray{Bool}`: Used to track and filter MULTI/EXEC transactions.
+- `multi_exec_bitmask::Vector{Bool}`: Used to track and filter MULTI/EXEC transactions.
 
 # Examples
 ```julia-repl
@@ -26,13 +26,12 @@ julia> execute(pipe)
 """
 mutable struct Pipeline
     client::Client
-    resp::AbstractString
-    n_commands::Integer
+    resp::Vector{String}
+    filter_multi_exec::Bool
     multi_exec::Bool
-    multi_exec_bitmask::AbstractArray{Bool}
-
-    Pipeline(client::Client=get_global_client()) = new(client, "", 0, true, [])
+    multi_exec_bitmask::Vector{Bool}
 end
+Pipeline(client::Client=get_global_client(); filter_multi_exec::Bool=false) = Pipeline(client, [], filter_multi_exec, true, [])
 
 """
     add!(pipe::Pipeline, command)
@@ -40,17 +39,19 @@ end
 Add a RESP compliant command to a pipeline client.
 """
 function add!(pipe::Pipeline, command::AbstractArray)
-    pipe.resp *= resp(command)
-    pipe.n_commands += 1
-    first = uppercase(command[1])
+    push!(pipe.resp, resp(command))
 
-    if first == "MULTI"
-        pipe.multi_exec = false
-    elseif first == "EXEC"
-        pipe.multi_exec = true
+    if pipe.filter_multi_exec
+        first = uppercase(command[1])
+
+        if first == "MULTI"
+            pipe.multi_exec = false
+        elseif first == "EXEC"
+            pipe.multi_exec = true
+        end
+
+        push!(pipe.multi_exec_bitmask, pipe.multi_exec)
     end
-
-    push!(pipe.multi_exec_bitmask, pipe.multi_exec)
 end
 function add!(pipe::Pipeline, command::AbstractString)
     add!(pipe, split_on_whitespace(command))
@@ -63,14 +64,13 @@ Flushes the underlying client socket and resets the pipeline in to a clean slate
 """
 function flush!(pipe::Pipeline)
     flush!(pipe.client)
-    pipe.resp = ""
-    pipe.n_commands = 0
+    pipe.resp = []
     pipe.multi_exec = false
     pipe.multi_exec_bitmask = []
 end
 
 """
-    pipeline(fn::Function[; clientt=get_global_client(), filter_multi_exec=true])
+    pipeline(fn::Function[; clientt=get_global_client(), filter_multi_exec=false])
 
 Execute commands batched in a pipeline client in a do block, optionally filter out MULTI transaction 
 responses before the EXEC call, e.g. "QUEUED".
@@ -95,8 +95,8 @@ julia> pipeline() do pipe
  nothing  # Nil response from final lpop
 ```
 """
-function Base.pipeline(fn::Function; client::Client=get_global_client(), filter_multi_exec=true)
-    pipe = Pipeline(client)
+function Base.pipeline(fn::Function; client::Client=get_global_client(), filter_multi_exec=false)
+    pipe = Pipeline(client; filter_multi_exec=filter_multi_exec)
     fn(pipe)
-    return execute(pipe; filter_multi_exec=filter_multi_exec)
+    return execute(pipe)
 end

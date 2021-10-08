@@ -52,7 +52,8 @@ end
 """
     execute(command, pipe::Pipeline)
 
-Add a RESP compliant command to a pipeline client.
+Add a RESP compliant command to a pipeline client, optionally filter out MULTI transaction responses
+before the EXEC call, e.g. "QUEUED".
 
 # Examples
 ```julia-repl
@@ -105,7 +106,7 @@ julia> execute(pipe)
  ["value", "value"]  # Only the response from final exec() call is returned
 ```
 """
-function execute(pipe::Pipeline; filter_multi_exec=true)
+function execute(pipe::Pipeline)
     if pipe.client.is_subscribed
         throw(RedisError("SUBERROR", "Cannot execute Pipeline while a subscription is open in the same Client instance"))
     end
@@ -113,10 +114,10 @@ function execute(pipe::Pipeline; filter_multi_exec=true)
     @lock pipe.client.lock begin
         try
             flush!(pipe.client)
-            write(pipe.client.socket, pipe.resp)
-            messages = [recv(pipe.client.socket) for _ in 1:pipe.n_commands]
+            write(pipe.client.socket, join(pipe.resp))
+            messages = [recv(pipe.client.socket) for _ in 1:length(pipe.resp)]
             
-            if filter_multi_exec
+            if pipe.filter_multi_exec
                 return messages[pipe.multi_exec_bitmask]
             end
             

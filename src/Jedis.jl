@@ -6,8 +6,8 @@ export Client, Pipeline, RedisError, get_global_client, set_global_client, get_s
        ping, flushdb, flushall, quit, set, setnx, get, del, exists, hexists, hkeys, setex, 
        expire, ttl, multi, exec, multi_exec, pipeline, hset, hget, hgetall, hmget, hdel, rpush, 
        lpush, lpos, lrem, lpop, rpop, blpop, brpop, llen, lrange, publish, subscribe, unsubscribe, 
-       psubscribe, punsubscribe, incr, incrby, incrbyfloat, hincrby, hincrbyfloat, zincrby,
-       acquire_lock, release_lock, redis_lock, isredislocked
+       psubscribe, punsubscribe, incr, incrby, incrbyfloat, hincrby, hincrbyfloat, zincrby, zadd, 
+       zrange, zrangebyscore, zrem, acquire_lock, release_lock, redis_lock, isredislocked
 
 using Sockets
 using MbedTLS

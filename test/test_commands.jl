@@ -77,6 +77,20 @@ end
     flushall()
 end
 
+@testset "ZFUNC" begin
+    @test zadd("testscore", 1, "test1") == 1
+    @test zadd("testscore", 2, "test2") == 1
+    @test zrange("testscore", 0, -1) == ["test1", "test2"]
+    @test zrange("testscore", 0, 1) == ["test1", "test2"]
+    @test zrange("testscore", 1, 1) == ["test2"]
+    @test zrangebyscore("testscore", 1, 1) == ["test1"]
+    @test zrem("testscore", "test1") == 1
+    @test zadd("testscore", 1, "test1", 3, "test3") == 2
+    @test zrem("testscore", "test1", "test3") == 2
+    @test zrange("testscore", 0, -1) == ["test2"]
+    flushall()
+end
+
 # @testset "QUIT" begin
 #     @test quit() == "OK"
 #     @test_throws Base.IOError ping()

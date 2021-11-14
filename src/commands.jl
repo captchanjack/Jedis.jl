@@ -334,3 +334,32 @@ hincrbyfloat(key, field, increment; client=get_global_client()) = execute(["HINC
 Increment the score of a member in a sorted set.
 """
 zincrby(key, field, increment; client=get_global_client()) = execute(["ZINCRBY", key, field, increment], client)
+
+"""
+    zadd(key, score, member[, score_and_members...])
+
+Add one or more members to a sorted set, or update its score if it 
+already exists
+"""
+zadd(key, score, member, score_and_members...; client=get_global_client()) = execute(["ZADD", key, score, member, score_and_members...], client)
+
+"""
+    zrange(key, min. max)
+
+Store a range of members from sorted set into another key
+"""
+zrange(key, min, max; client=get_global_client()) = execute(["ZRANGE", key, min, max], client)
+
+"""
+    zrangebyscore(key, min. max)
+
+Return a range of members in a sorted set, by score
+"""
+zrangebyscore(key, min, max; client=get_global_client()) = execute(["ZRANGEBYSCORE", key, min, max], client)
+
+"""
+    zrem(key, member[, members...])
+
+Remove one or more members from a sorted set
+"""
+zrem(key, member, members...; client=get_global_client()) = execute(["ZREM", key, member, members...], client)

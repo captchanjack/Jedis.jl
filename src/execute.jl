@@ -19,6 +19,7 @@ function execute(command::AbstractArray, client::Client=get_global_client())
 
     @lock client.lock begin
         flush!(client)
+        retry!(client)
         write(client.socket, resp(command))
         msg = recv(client.socket)
         
@@ -41,6 +42,7 @@ Sends a RESP compliant command to the Redis host without reading the returned re
 function execute_without_recv(command::AbstractArray, client::Client=get_global_client())
     @lock client.lock begin
         flush!(client)
+        retry!(client)
         write(client.socket, resp(command))
         return
     end

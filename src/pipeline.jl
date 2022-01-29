@@ -3,7 +3,7 @@
 
 Creates a Pipeline client instance for executing commands in batch.
 
-# Attributes
+# Fields
 - `client::Client`: Reference to the underlying Client connection.
 - `resp::Vector{String}`: Batched commands converted to RESP compliant string.
 - `filter_multi_exec::Bool`: Set `true` to filter out QUEUED responses in a MULTI/EXEC transaction.

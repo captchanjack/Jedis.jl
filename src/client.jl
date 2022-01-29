@@ -1,10 +1,10 @@
 """
-    Client([; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing]) -> Client
+    Client([; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing, retry_when_closed=true, retry_max_attemps=1, retry_backoff=(x) -> 2^x]) -> Client
 
 Creates a Client instance connecting and authenticating to a Redis host, provide an `MbedTLS.SSLConfig` 
 (see `get_ssl_config`) for a secured Redis connection (SSL/TLS).
 
-# Attributes
+# Fields
 - `host::AbstractString`: Redis host.
 - `port::Integer`: Redis port.
 - `database::Integer`: Redis database index.
@@ -16,6 +16,9 @@ Creates a Client instance connecting and authenticating to a Redis host, provide
 - `is_subscribed::Bool`: Whether this Client is actively subscribed to any channels or patterns.
 - `subscriptions::AbstractSet{<:AbstractString}`: Set of channels currently subscribed on.
 - `psubscriptions::AbstractSet{<:AbstractString}`: Set of patterns currently psubscribed on.
+- `retry_when_closed::Bool`: Set `true` to try and reconnect when client socket status is closed, defaults to `true`.
+- `retry_max_attempts`::Int`: Maximum number of retries for reconnection, defaults to `1`.
+- `retry_backoff::Function`: Retry backoff function, called after each retry and must return a single number, where that number is the sleep time (in seconds) until the next retry, accepts a single argument, the number of retries attempted.
 
 # Note
 - Connection parameters `host`, `port`, `database`, `password`, `username` will not change after 
@@ -55,9 +58,12 @@ mutable struct Client
     is_subscribed::Bool
     subscriptions::AbstractSet{<:AbstractString}
     psubscriptions::AbstractSet{<:AbstractString}
+    retry_when_closed::Bool
+    retry_max_attempts::Int
+    retry_backoff::Function
 end
 
-function Client(; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing)
+function Client(; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing, retry_when_closed=true, retry_max_attemps=1, retry_backoff=(x) -> 2^x)
     if isnothing(ssl_config)
         socket = connect(host, port)
     else
@@ -75,8 +81,16 @@ function Client(; host="127.0.0.1", port=6379, database=0, password="", username
         ssl_config,
         false,
         Set{String}(),
-        Set{String}()
+        Set{String}(),
+        retry_when_closed,
+        retry_max_attemps,
+        retry_backoff
     )
+
+    # Ping server to test connection and set socket status to Base.StatusPaused (i.e. a ready state)
+    # Raw execution is used to bypass locks and retries
+    write(client.socket, resp(["PING"]))
+    recv(client.socket)
 
     !isempty(password * username) && auth(password, username; client=client)
     database != 0 && select(database; client=client)
@@ -135,7 +149,7 @@ const GLOBAL_CLIENT = Ref{Client}()
 
 """
     set_global_client(client::Client)
-    set_global_client([; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing])
+    set_global_client([; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing, retry_when_closed=true, retry_max_attemps=1, retry_backoff=(x) -> 2^x])
 
 Sets a Client object as the `GLOBAL_CLIENT[]` instance.
 """
@@ -143,8 +157,8 @@ function set_global_client(client::Client)
     GLOBAL_CLIENT[] = client
 end
 
-function set_global_client(; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing)
-    client = Client(; host=host, port=port, database=database, password=password, username=username,  ssl_config=ssl_config)
+function set_global_client(; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing, retry_when_closed=true, retry_max_attemps=1, retry_backoff=(x) -> 2^x)
+    client = Client(; host=host, port=port, database=database, password=password, username=username, ssl_config=ssl_config, retry_when_closed=retry_when_closed, retry_max_attemps=retry_max_attemps, retry_backoff=retry_backoff)
     set_global_client(client)
 end
 
@@ -160,6 +174,15 @@ function get_global_client()
     else
         return set_global_client()
     end
+end
+
+"""
+    endpoint(client::Client)
+
+Retrieves the endpoint (host:port) of the client.
+"""
+function endpoint(client::Client)
+    return "$(client.host):$(client.port)"
 end
 
 """
@@ -217,6 +240,76 @@ function flush!(client::Client)
     while bytesavailable(client.socket) > 0
         recv(client.socket)
     end
+end
+
+"""
+    status(client::Client)
+
+Returns the status of the client socket.
+"""
+function status(client::Client)
+    if client.socket isa TCPSocket
+        return client.socket.status
+    elseif client.socket isa MbedTLS.SSLContext
+        return client.socket.bio.status
+    else
+        throw(RedisError("INVALIDSOCKET", "Invalid socket type: $(typeof(client.socket))"))
+    end
+end
+
+"""
+    isclosed(client::Client)
+
+Returns `true` if client socket status is `Base.StatusClosing`, `Base.StatusClosed` or 
+`Base.StatusOpen`, `false` otherwise. It turns out when status is `Base.StatusOpen` the socket 
+is already unusable. `Base.StatusPaused` is the true ready state.
+"""
+function isclosed(client::Client)
+    return status(client) == Base.StatusClosing || status(client) == Base.StatusClosed || status(client) == Base.StatusOpen
+end
+
+"""
+    retry!(client::Client)
+
+Attempts to re-estiablish client socket connection, behaviour is determined by the retry parameters;
+`retry_when_closed`, `retry_max_attempts`, `retry_backoff`.
+"""
+function retry!(client::Client)
+    if !isclosed(client)
+        return
+    end
+
+    if !client.retry_when_closed
+        throw(Base.IOError("Client connection to $(endpoint(client)) is closed or unusable, try establishing a new connection, or set `retry_when_closed` field to `true`", Base.StatusUninit))
+    end
+
+    @warn "Client socket is closed or unusable, retrying connection to $(endpoint(client))"
+    attempts = 0
+
+    while attempts < client.retry_max_attempts
+        attempts += 1
+        @info "Reconnection attempt #$attempts to $(endpoint(client))"
+
+        try
+            reconnect!(client)
+            @info "Reconnection attempt #$attempts to $(endpoint(client)) was successful"
+            return
+        catch err
+            if !(err isa Base.IOError)
+                rethrow()
+            end
+
+            @warn "Reconnection attempt #$attempts to $(endpoint(client)) was unsuccessful"
+        end
+
+        if attempts < client.retry_max_attempts
+            backoff = client.retry_backoff(attempts)
+            @info "Sleeping $(backoff)s until next reconnection attempt to $(endpoint(client))"
+            sleep(backoff)
+        end
+    end
+
+    throw(Base.IOError("Client connection to $(endpoint(client)) is closed or unusable, try establishing a new connection, or set `retry_when_closed` field to `true`", Base.StatusUninit))
 end
 
 """

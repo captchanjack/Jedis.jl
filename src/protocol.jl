@@ -56,7 +56,15 @@ function handle_bulk_string(io, x)
     if x == "-1"
         return nothing
     end
-    return readline(io)
+
+    x = parse(Int, x)
+    r = ""
+    
+    while length(r) < x + 2
+        r *= readline(io; keep=true)
+    end
+
+    return r[1:end-2]
 end
 
 function handle_array(io, x)

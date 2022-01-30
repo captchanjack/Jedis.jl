@@ -39,48 +39,52 @@ function resp(command::AbstractArray)
     return "$(RedisType.array)$(n)$(CRLF)" * r
 end
 
-function handle_simple_string(_, x)
+function parse_simple_string(_, x)
     return x
 end
 
-function handle_integer(_, x)
+function parse_integer(_, x)
     return parse(Int64, x)
 end
 
-function handle_error(_, x)
+function parse_error(_, x)
     err_type, err_msg = split(x, ' '; limit=2)
     return RedisError(err_type, err_msg)
 end
 
-function handle_bulk_string(io, x)
+function parse_bulk_string(io, x)
     if x == "-1"
         return nothing
     end
 
-    x = parse(Int, x)
-    r = ""
-    
-    while length(r) < x + 2
-        r *= readline(io; keep=true)
-    end
-
-    return r[1:end-2]
+    x = parse(Int, x) + 2
+    buffer = Vector{UInt8}(undef, x)
+    readbytes!(io, buffer, x)
+    return String(buffer[1:end-2])
 end
 
-function handle_array(io, x)
+function parse_array(io, x)
     if x == "0"
         return []
     end
     return [recv(io) for _ in 1:parse(Int64, x)]
 end
 
-const RESPHandler = Dict{Char,Function}(
-    '+' => handle_simple_string,
-    '-' => handle_error,
-    ':' => handle_integer,
-    '$' => handle_bulk_string,
-    '*' => handle_array
-)
+function resp_parser(b::Char)::Function
+    if b == '+'
+        return parse_simple_string
+    elseif b == '-'
+        return parse_error
+    elseif b == ':'
+        return parse_integer
+    elseif b == '$'
+        return parse_bulk_string
+    elseif b == '*'
+        return parse_array
+    else
+        throw(RedisError("INVALIDBYTE", "Parser for byte '$b' does not exist."))
+    end
+end
 
 """
     recv(io::Union{TCPSocket,Base.GenericIOBuffer})
@@ -94,8 +98,8 @@ function recv(io::Union{TCPSocket,Base.GenericIOBuffer})
         return nothing
     end
 
-    handler = RESPHandler[line[1]]
-    return handler(io, line[2:end])
+    parser = resp_parser(line[1])
+    return parser(io, line[2:end])
 end
 
 """

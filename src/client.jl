@@ -237,9 +237,9 @@ end
 Reads and discards any bytes that remain unread in the client socket.
 """
 function flush!(client::Client)
-    while bytesavailable(client.socket) > 0
-        recv(client.socket)
-    end
+    nb = bytesavailable(client.socket)
+    buffer = Vector{UInt8}(undef, nb)
+    readbytes!(client.socket, buffer, nb)
 end
 
 """

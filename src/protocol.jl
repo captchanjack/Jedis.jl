@@ -57,7 +57,7 @@ function parse_bulk_string(io, x)
         return nothing
     end
 
-    x = parse(Int, x) + 2
+    x = parse(Int64, x) + 2
     buffer = Vector{UInt8}(undef, x)
     readbytes!(io, buffer, x)
     return String(buffer[1:end-2])
@@ -109,5 +109,8 @@ Copies all available decrypted bytes from an MbedTLS.SSLContext into an IOBuffer
 """
 function recv(io::MbedTLS.SSLContext)
     MbedTLS.wait_for_decrypted_data(io)
-    return recv(IOBuffer(readavailable(io)))
+    nb = bytesavailable(io)
+    buffer = IOBuffer(Vector{UInt8}(undef, nb))
+    readbytes!(io, buffer.data, nb)
+    return recv(buffer)
 end

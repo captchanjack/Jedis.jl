@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Home · Jedis.jl Documentation</title><script data-outdated-warner src="assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><script src="../copy.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href>Jedis.jl Documentation</a></span></div><form class="docs-search" action="search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>Home</a><ul class="internal"><li><a class="tocitem" href="#Key-Features"><span>Key Features</span></a></li><li><a class="tocitem" href="#Usage"><span>Usage</span></a></li></ul></li><li><a class="tocitem" href="client/">Client</a></li><li><a class="tocitem" href="commands/">Commands</a></li><li><a class="tocitem" href="pipeline/">Pipelining</a></li><li><a class="tocitem" href="pubsub/">Pub/Sub</a></li><li><a class="tocitem" href="lock/">Locks</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Home</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Home</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/captchanjack/Jedis.jl/blob/master/docs/src/index.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Jedis.jl"><a class="docs-heading-anchor" href="#Jedis.jl">Jedis.jl</a><a id="Jedis.jl-1"></a><a class="docs-heading-anchor-permalink" href="#Jedis.jl" title="Permalink"></a></h1><p>A lightweight Redis client, implemented in Julia.</p><h2 id="Key-Features"><a class="docs-heading-anchor" href="#Key-Features">Key Features</a><a id="Key-Features-1"></a><a class="docs-heading-anchor-permalink" href="#Key-Features" title="Permalink"></a></h2><p>Links to detailed interfaces and documentation:</p><ul><li>Basic <strong><a href="https://captchanjack.github.io/Jedis.jl/commands/">command execution</a></strong></li><li>Executing commands with a <strong><a href="https://captchanjack.github.io/Jedis.jl/client/">global client</a></strong> instance</li><li><strong><a href="https://captchanjack.github.io/Jedis.jl/pipeline/">Pipelining</a></strong></li><li><strong><a href="https://captchanjack.github.io/Jedis.jl/commands/#Jedis.multi">Transactions</a></strong></li><li><strong><a href="https://captchanjack.github.io/Jedis.jl/pubsub/">Pub/Sub</a></strong></li><li><strong><a href="https://captchanjack.github.io/Jedis.jl/lock/">Redis locks</a></strong></li><li>Support for secured Redis connection (<strong><a href="https://captchanjack.github.io/Jedis.jl/client/#Jedis.get_ssl_config/">SSL/TLS</a></strong>)</li></ul><h2 id="Usage"><a class="docs-heading-anchor" href="#Usage">Usage</a><a id="Usage-1"></a><a class="docs-heading-anchor-permalink" href="#Usage" title="Permalink"></a></h2><p>Establishing a basic <strong><a href="https://captchanjack.github.io/Jedis.jl/client/">client</a></strong> connection:</p><pre><code class="nohighlight hljs">client = Client(host=&quot;localhost&quot;, port=6379)</code></pre><p>Establishing a <strong><a href="https://captchanjack.github.io/Jedis.jl/client/#Jedis.get_ssl_config/">secured client</a></strong> (SSL/TLS) connection:</p><pre><code class="nohighlight hljs">ssl_config = get_ssl_config(ssl_certfile=&quot;redis.crt&quot;, ssl_keyfile=&quot;redis.key&quot;, ssl_ca_certs=&quot;ca.crt&quot;)
+client = Client(ssl_config=ssl_config)</code></pre><p>Setting and getting the global client:</p><pre><code class="nohighlight hljs">set_global_client(client)
+get_global_client()</code></pre><p>Executing <strong><a href="https://captchanjack.github.io/Jedis.jl/commands/">commands</a></strong>:</p><pre><code class="nohighlight hljs">set(&quot;key&quot;, &quot;value&quot;; client=client)
+get(&quot;key&quot;)  # uses global client by default
+execute([&quot;DEL&quot;, &quot;key&quot;], client)  # custom commands</code></pre><p>Using <strong><a href="https://captchanjack.github.io/Jedis.jl/pipeline/">pipelining</a></strong> to speed up queries:</p><pre><code class="nohighlight hljs"># Normal
+pipe = Pipeline()
+set(&quot;key&quot;, &quot;value&quot;; client=pipe)
+get(&quot;key&quot;; client=pipe)
+results = execute(pipe)
+
+# Do-block
+results = pipeline() do pipe
+    lpush(&quot;example&quot;, 1, 2, 3, 4; client=pipe)
+    lpop(&quot;example&quot;; client=pipe)
+    rpop(&quot;example&quot;; client=pipe)
+    lpop(&quot;example&quot;; client=pipe)
+end</code></pre><p>Executing a group of commands atomically with <strong><a href="https://captchanjack.github.io/Jedis.jl/commands/#Jedis.multi">MULTI/EXEC transactions</a></strong>:</p><pre><code class="nohighlight hljs"># Normal
+multi()
+set(&quot;key&quot;, &quot;value&quot;)
+get(&quot;key&quot;)
+results = exec()
+
+# Do-block
+results = multi_exec() do 
+    set(&quot;key&quot;, &quot;value&quot;)
+    get(&quot;key&quot;)
+    get(&quot;key&quot;)
+end</code></pre><p>Executing a MULTI/EXEC transaction within a pipeline:</p><pre><code class="nohighlight hljs">results = pipeline() do pipe
+    lpush(&quot;example&quot;, 1, 2, 3, 4; client=pipe)
+    lpop(&quot;example&quot;; client=pipe)
+    rpop(&quot;example&quot;; client=pipe)
+
+    multi_exec(; client=pipe) do
+        lpop(&quot;example&quot;; client=pipe)
+        rpop(&quot;example&quot;; client=pipe)
+    end
+
+    lpop(&quot;example&quot;; client=pipe)
+end</code></pre><p>Using Redis <strong><a href="https://captchanjack.github.io/Jedis.jl/pubsub/">Pub/Sub</a></strong> (interfaces for <code>subscribe</code> and <code>psubscribe</code> are the same):</p><pre><code class="nohighlight hljs"># Set up channels, publisher and subscriber clients
+channels = [&quot;first&quot;, &quot;second&quot;]
+publisher = Client()
+subscriber = Client()
+
+# Begin the subscription
+stop_fn(msg) = msg[end] == &quot;close subscription&quot;;  # stop the subscription loop if the message matches
+messages = []
+
+@async subscribe(channels...; stop_fn=stop_fn, client=subscriber) do msg
+    push!(messages, msg)
+end  # Without @async this function will block, alternatively use Thread.@spawn
+
+wait_until_subscribed(subscriber)
+subscriber.is_subscribed  # outputs true
+subscriber.subscriptions  # set of actively subscribed channels
+
+# Publish to channels
+publish(&quot;first&quot;, &quot;hello&quot;; client=publisher)
+publish(&quot;second&quot;, &quot;world&quot;; client=publisher)
+
+# Unsubscribing
+unsubscribe(&quot;first&quot;; client=subscriber)
+wait_until_channel_unsubscribed(subscriber, &quot;first&quot;)
+subscriber.subscriptions
+unsubscribe(; client=subscriber)  # unsubscribe from all channels
+wait_until_unsubscribed(subscriber)
+subscriber.is_subscribed  # outputs false
+subscriber.subscriptions  # set of actively subscribed channels should be empty</code></pre><p>Using <strong><a href="https://captchanjack.github.io/Jedis.jl/lock/">redis locks</a></strong> for performing atomic operations:</p><pre><code class="nohighlight hljs">@async redis_lock(&quot;example_lock&quot;) do
+    sleep(3)  # Lock will exist for 3 seconds
+end
+
+while !isredislocked(&quot;example_lock&quot;)
+    sleep(0.1)  # Ensure async lock is active before proceeding
+end
+
+redis_lock(&quot;example_lock&quot;) do
+    println(&quot;This message will be delayed by 3 seconds!&quot;)  # Blocked by first lock
+end</code></pre></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="client/">Client »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Sunday 30 January 2022 05:14">Sunday 30 January 2022</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

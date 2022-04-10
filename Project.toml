@@ -1,7 +1,7 @@
 name = "Jedis"
 uuid = "b89ccfe0-2c5f-46f6-b89b-da3e1c2e286f"
 authors = ["Jack Chan <j.chan2504@gmail.com>"]
-version = "0.2.11"
+version = "0.2.12"
 
 [deps]
 MbedTLS = "739be429-bea8-5141-9913-cc70e7f3736d"

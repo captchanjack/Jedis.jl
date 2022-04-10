@@ -191,7 +191,9 @@ function psubscribe(fn::Function, pattern, patterns...; stop_fn::Function=(msg) 
 
     try
         while true
-            type, pttrn = msg = recv(client.socket)
+            msg = recv(client.socket)
+            isnothing(msg) && continue
+            type, pttrn = msg
 
             if type == "pmessage" && pttrn in client.psubscriptions
                 fn(msg)

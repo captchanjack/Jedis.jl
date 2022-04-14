@@ -116,6 +116,7 @@ function execute(pipe::Pipeline)
     @lock pipe.client.lock begin
         try
             flush!(pipe.client)
+            retry!(pipe.client)
             write(pipe.client.socket, join(pipe.resp))
             messages = [recv(pipe.client.socket) for _ in 1:length(pipe.resp)]
             

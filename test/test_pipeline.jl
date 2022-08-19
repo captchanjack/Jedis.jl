@@ -46,8 +46,16 @@ end
 end
 
 @testset "Pipeline - Batching" begin
-    batch_size = 100
-    result = pipeline(100) do pipe
+    batch_size = 333
+    result = pipeline(batch_size) do pipe
+        for _ in 1:1000
+            lrange("nothing", 0, -1; client=pipe)
+        end
+    end
+    @test result == fill([], 1000)
+
+    batch_size = 3333
+    result = pipeline(batch_size) do pipe
         for _ in 1:1000
             lrange("nothing", 0, -1; client=pipe)
         end

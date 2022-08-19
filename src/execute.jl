@@ -143,12 +143,12 @@ function execute(pipe::Pipeline, batch_size::Int)
 
             n_cmd = length(pipe.resp)
             messages = Vector{Any}(undef, n_cmd)
-            l, r  = 1, min(batch_size, n_cmd)
+            l, r  = 1, batch_size
             
             while l <= n_cmd
-                write(pipe.client.socket, join(pipe.resp[l:r]))
+                write(pipe.client.socket, join(pipe.resp[l:min(r, n_cmd)]))
                 
-                for i in l:r
+                for i in l:min(r, n_cmd)
                     messages[i] = recv(pipe.client.socket)
                 end
                 

@@ -80,10 +80,11 @@ function execute(command::AbstractString, pipe::Pipeline)
 end
 
 """
-    execute(pipe::Pipeline[; filter_multi_exec=true])
+    execute(pipe::Pipeline[, batch_size::Int; filter_multi_exec=true])
 
 Execute commands batched in a pipeline client, optionally filter out MULTI transaction responses
-before the EXEC call, e.g. "QUEUED".
+before the EXEC call, e.g. "QUEUED". Set `batch_size` to batch commands with max commands 
+per pipeline, defaults to use a single pipeline for all commands.
 
 # Examples
 ```julia-repl
@@ -130,3 +131,38 @@ function execute(pipe::Pipeline)
         end
     end
 end            
+function execute(pipe::Pipeline, batch_size::Int)
+    if pipe.client.is_subscribed
+        throw(RedisError("SUBERROR", "Cannot execute Pipeline while a subscription is open in the same Client instance"))
+    end
+
+    @lock pipe.client.lock begin
+        try
+            flush!(pipe.client)
+            retry!(pipe.client)
+
+            n_cmd = length(pipe.resp)
+            messages = Vector{Any}(undef, n_cmd)
+            l, r  = 1, min(batch_size, n_cmd)
+            
+            while l <= n_cmd
+                write(pipe.client.socket, join(pipe.resp[l:r]))
+                
+                for i in l:r
+                    messages[i] = recv(pipe.client.socket)
+                end
+                
+                l += batch_size
+                r += batch_size
+            end
+            
+            if pipe.filter_multi_exec
+                return messages[pipe.multi_exec_bitmask]
+            end
+            
+            return messages
+        finally
+            flush!(pipe)
+        end
+    end
+end           

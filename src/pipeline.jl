@@ -70,10 +70,11 @@ function flush!(pipe::Pipeline)
 end
 
 """
-    pipeline(fn::Function[; clientt=get_global_client(), filter_multi_exec=false])
+    pipeline(fn::Function[, batch_size::Int; clientt=get_global_client(), filter_multi_exec=false])
 
 Execute commands batched in a pipeline client in a do block, optionally filter out MULTI transaction 
-responses before the EXEC call, e.g. "QUEUED".
+responses before the EXEC call, e.g. "QUEUED". Set `batch_size` to batch commands with max commands 
+per pipeline, defaults to use a single pipeline for all commands.
 
 # Examples
 ```julia-repl
@@ -99,4 +100,9 @@ function Base.pipeline(fn::Function; client::Client=get_global_client(), filter_
     pipe = Pipeline(client; filter_multi_exec=filter_multi_exec)
     fn(pipe)
     return execute(pipe)
+end
+function Base.pipeline(fn::Function, batch_size::Int; client::Client=get_global_client(), filter_multi_exec=false)
+    pipe = Pipeline(client; filter_multi_exec=filter_multi_exec)
+    fn(pipe)
+    return execute(pipe, batch_size)
 end

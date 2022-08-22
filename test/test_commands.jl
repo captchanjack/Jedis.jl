@@ -1,4 +1,4 @@
-set_global_client()
+set_global_client(retry_when_closed=false)
 
 @testset "AUTH SELECT PING" begin
     @test_throws RedisError auth("")
@@ -91,7 +91,16 @@ end
     flushall()
 end
 
-# @testset "QUIT" begin
-#     @test quit() == "OK"
-#     @test_throws Base.IOError ping()
-# end
+@testset "QUIT" begin
+    @test quit() == "OK"
+    @test_throws Base.IOError ping()
+    @test isclosed(get_global_client())
+end
+
+set_global_client(retry_when_closed=true)
+
+@testset "RETRY" begin
+    @test quit() == "OK"
+    @test ping() == "PONG"
+    @test !isclosed(get_global_client())
+end

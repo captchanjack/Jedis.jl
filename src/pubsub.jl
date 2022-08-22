@@ -10,7 +10,7 @@ publish(channel, message; client=get_global_client()) = execute(["PUBLISH", chan
               channel,
               channels...;
               stop_fn::Function=(msg) -> false,
-              err_cb::Function=(err) -> log_error(err))
+              err_cb::Function=(err) -> rethrow(err))
 
 Listen for messages published to the given channels in a do block. Optionally provide a stop 
 function `stop_fn(msg)` which gets run as a callback everytime a subscription message is received, 
@@ -69,7 +69,7 @@ julia> subscriber.subscriptions
 Set{String}()
 ```
 """
-function subscribe(fn::Function, channel, channels...; stop_fn::Function=(msg) -> false, err_cb::Function=(err) -> log_error(err), client::Client=get_global_client())
+function subscribe(fn::Function, channel, channels...; stop_fn::Function=(msg) -> false, err_cb::Function=(err) -> rethrow(err), client::Client=get_global_client())
     if client.is_subscribed
         throw(RedisError("SUBERROR", "Cannot open multiple subscriptions in the same Client instance"))
     end
@@ -100,7 +100,7 @@ function subscribe(fn::Function, channel, channels...; stop_fn::Function=(msg) -
         err_cb(err)
     finally
         if !isempty(client.subscriptions)
-            unsubscribe(client.subscriptions...; client=client)
+            isclosed(client) || unsubscribe(client.subscriptions...; client=client)
             @lock client.lock client.subscriptions = Set{String}()
             @lock client.lock flush!(client)
         end
@@ -120,7 +120,7 @@ unsubscribe(channels...; client=get_global_client()) = execute_without_recv(["UN
                pattern,
                patterns...;
                stop_fn::Function=(msg) -> false,
-               err_cb::Function=(err) -> log_error(err))
+               err_cb::Function=(err) -> rethrow(err))
 
 Listen for messages published to the given channels matching ghe given patterns in a do block.
 Optionally provide a stop function `stop_fn(msg)` which gets run as a callback everytime a 
@@ -180,7 +180,7 @@ julia> subscriber.psubscriptions
 Set{String}()
 ```
 """
-function psubscribe(fn::Function, pattern, patterns...; stop_fn::Function=(msg) -> false, err_cb::Function=(err) -> log_error(err), client::Client=get_global_client())
+function psubscribe(fn::Function, pattern, patterns...; stop_fn::Function=(msg) -> false, err_cb::Function=(err) -> rethrow(err), client::Client=get_global_client())
     if client.is_subscribed
         throw(RedisError("SUBERROR", "Cannot open multiple subscriptions in the same Client instance"))
     end
@@ -213,7 +213,7 @@ function psubscribe(fn::Function, pattern, patterns...; stop_fn::Function=(msg) 
         err_cb(err)
     finally
         if !isempty(client.psubscriptions)
-            punsubscribe(client.psubscriptions...; client=client)
+            isclosed(client) || punsubscribe(client.psubscriptions...; client=client)
             @lock client.lock client.psubscriptions = Set{String}()
             @lock client.lock flush!(client)
         end

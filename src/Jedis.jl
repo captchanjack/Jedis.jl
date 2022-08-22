@@ -7,7 +7,7 @@ export Client, Pipeline, RedisError, get_global_client, set_global_client, get_s
        expire, ttl, multi, exec, multi_exec, pipeline, hset, hget, hgetall, hmget, hdel, rpush, 
        lpush, lpos, lrem, lpop, rpop, blpop, brpop, llen, lrange, publish, subscribe, unsubscribe, 
        psubscribe, punsubscribe, incr, incrby, incrbyfloat, hincrby, hincrbyfloat, zincrby, zadd, 
-       zrange, zrangebyscore, zrem, acquire_lock, release_lock, redis_lock, isredislocked
+       zrange, zrangebyscore, zrem, acquire_lock, release_lock, redis_lock, isredislocked, isclosed
 
 using Sockets
 using MbedTLS
@@ -16,6 +16,7 @@ import Base: copy, showerror, get, pipeline
 
 include("exceptions.jl")
 include("utilities.jl")
+include("stream.jl")
 include("client.jl")
 include("pipeline.jl")
 include("protocol.jl")

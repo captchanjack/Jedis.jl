@@ -9,6 +9,7 @@ Jedis.GLOBAL_CLIENT
 set_global_client
 get_global_client
 Jedis.copy
+isclosed
 disconnect!
 reconnect!
 wait_until_subscribed

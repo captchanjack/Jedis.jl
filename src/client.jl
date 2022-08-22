@@ -1,5 +1,5 @@
 """
-    Client([; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing, retry_when_closed=true, retry_max_attemps=1, retry_backoff=(x) -> 2^x]) -> Client
+    Client([; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing, retry_when_closed=true, retry_max_attemps=1, retry_backoff=(x) -> 2^x, keepalive_enable=false, keepalive_delay=60]) -> Client
 
 Creates a Client instance connecting and authenticating to a Redis host, provide an `MbedTLS.SSLConfig` 
 (see `get_ssl_config`) for a secured Redis connection (SSL/TLS).
@@ -19,6 +19,8 @@ Creates a Client instance connecting and authenticating to a Redis host, provide
 - `retry_when_closed::Bool`: Set `true` to try and reconnect when client socket status is closed, defaults to `true`.
 - `retry_max_attempts`::Int`: Maximum number of retries for reconnection, defaults to `1`.
 - `retry_backoff::Function`: Retry backoff function, called after each retry and must return a single number, where that number is the sleep time (in seconds) until the next retry, accepts a single argument, the number of retries attempted.
+- `keepalive_enable::Bool=false`: Set `true` to enable TCP keep-alive.
+- `keepalive_delay::Int=60`: Initial delay in seconds, defaults to 60s, ignored when `keepalive_enable` is `false`. After delay has been reached, 10 successive probes, each spaced 1 second from the previous one, will still happen. If the connection is still lost at the end of this procedure, then the handle is destroyed with a UV_ETIMEDOUT error passed to the corresponding callback.
 
 # Note
 - Connection parameters `host`, `port`, `database`, `password`, `username` will not change after 
@@ -61,22 +63,18 @@ mutable struct Client
     retry_when_closed::Bool
     retry_max_attempts::Int
     retry_backoff::Function
+    keepalive_enable::Bool
+    keepalive_delay::Int
 end
 
-function Client(; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing, retry_when_closed=true, retry_max_attemps=1, retry_backoff=(x) -> 2^x)
-    if isnothing(ssl_config)
-        socket = connect(host, port)
-    else
-        socket = ssl_connect(host, port, ssl_config)
-    end
-    
+function Client(; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing, retry_when_closed=true, retry_max_attemps=1, retry_backoff=(x) -> 2^x, keepalive_enable=false, keepalive_delay=60)
     client = Client(
         host,
         port,
         database,
         password,
         username,
-        socket,
+        isnothing(ssl_config) ? connect(host, port) : ssl_connect(host, port, ssl_config),
         ReentrantLock(),
         ssl_config,
         false,
@@ -84,18 +82,35 @@ function Client(; host="127.0.0.1", port=6379, database=0, password="", username
         Set{String}(),
         retry_when_closed,
         retry_max_attemps,
-        retry_backoff
+        retry_backoff,
+        keepalive_enable,
+        keepalive_delay
     )
 
-    # Ping server to test connection and set socket status to Base.StatusPaused (i.e. a ready state)
-    # Raw execution is used to bypass locks and retries
+    prepare(client)
+    return client
+end
+
+"""
+    prepare(client::Client)
+
+Prepares a new client, involves pre-pinging the server, logging in with the correct username
+and password, selecting the chosen database, and setting keepalive if applicable.
+
+Pinging the server is to test connection and set socket status to Base.StatusPaused (i.e. a ready state).
+Raw execution is used to bypass locks and retries
+"""
+function prepare(client::Client)
     write(client.socket, resp(["PING"]))
     recv(client.socket)
+    
+    !isempty(client.password * client.username) && auth(client.password, client.username; client=client)
+    client.database != 0 && select(client.database; client=client)
 
-    !isempty(password * username) && auth(password, username; client=client)
-    database != 0 && select(database; client=client)
+    client.keepalive_enable && keepalive!(client.socket, Cint(1), Cint(client.keepalive_delay))
 
-    return client
+    # Async garbage collect is needed to clear any stale clients
+    @async GC.gc()
 end
 
 """
@@ -149,7 +164,7 @@ const GLOBAL_CLIENT = Ref{Client}()
 
 """
     set_global_client(client::Client)
-    set_global_client([; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing, retry_when_closed=true, retry_max_attemps=1, retry_backoff=(x) -> 2^x])
+    set_global_client([; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing, retry_when_closed=true, retry_max_attemps=1, retry_backoff=(x) -> 2^x, keepalive_enable=false, keepalive_delay=60])
 
 Sets a Client object as the `GLOBAL_CLIENT[]` instance.
 """
@@ -157,8 +172,8 @@ function set_global_client(client::Client)
     GLOBAL_CLIENT[] = client
 end
 
-function set_global_client(; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing, retry_when_closed=true, retry_max_attemps=1, retry_backoff=(x) -> 2^x)
-    client = Client(; host=host, port=port, database=database, password=password, username=username, ssl_config=ssl_config, retry_when_closed=retry_when_closed, retry_max_attemps=retry_max_attemps, retry_backoff=retry_backoff)
+function set_global_client(; host="127.0.0.1", port=6379, database=0, password="", username="", ssl_config=nothing, retry_when_closed=true, retry_max_attemps=1, retry_backoff=(x) -> 2^x, keepalive_enable=false, keepalive_delay=60)
+    client = Client(; host=host, port=port, database=database, password=password, username=username, ssl_config=ssl_config, retry_when_closed=retry_when_closed, retry_max_attemps=retry_max_attemps, retry_backoff=retry_backoff, keepalive_enable=keepalive_enable, keepalive_delay=keepalive_delay)
     set_global_client(client)
 end
 
@@ -197,7 +212,12 @@ function Base.copy(client::Client)
         database=client.database,
         password=client.password,
         username=client.username,
-        ssl_config=client.ssl_config
+        ssl_config=client.ssl_config,
+        retry_when_closed=client.retry_when_closed,
+        retry_max_attempts=client.retry_max_attempts,
+        retry_backoff=client.retry_backoff,
+        keepalive_enable=client.keepalive_enable,
+        keepalive_delay=client.keepalive_delay
     )
 end
 
@@ -217,17 +237,8 @@ Reconnects the input client socket connection.
 """
 function reconnect!(client::Client)
     disconnect!(client)
-
-    if isnothing(client.ssl_config)
-        new_socket = connect(client.host, client.port)
-    else
-        new_socket = ssl_connect(connect(client.host, client.port), client.host, client.ssl_config)
-    end
-
-    client.socket = new_socket
-    !isempty(client.password * client.username) && auth(client.password, client.username; client=client)
-    client.database != 0 && select(client.database; client=client)
-
+    client.socket = isnothing(client.ssl_config) ? connect(client.host, client.port) : ssl_connect(connect(client.host, client.port), client.host, client.ssl_config)
+    prepare(client)
     return client
 end
 

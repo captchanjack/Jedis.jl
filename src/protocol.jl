@@ -92,7 +92,7 @@ end
 Reads any bytes before next CRLF (\r\n) in a TCPScoket or IOBuffer, blocks if no bytes available.
 """
 function recv(io::Union{TCPSocket,Base.GenericIOBuffer})
-    line = readline(io)
+    line = _readline(io)
 
     if isempty(line)
         return nothing

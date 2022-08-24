@@ -87,12 +87,12 @@ function Client(; host="127.0.0.1", port=6379, database=0, password="", username
         keepalive_delay
     )
 
-    prepare(client)
+    prepare!(client)
     return client
 end
 
 """
-    prepare(client::Client)
+    prepare!(client::Client)
 
 Prepares a new client, involves pre-pinging the server, logging in with the correct username
 and password, selecting the chosen database, and setting keepalive if applicable.
@@ -100,7 +100,7 @@ and password, selecting the chosen database, and setting keepalive if applicable
 Pinging the server is to test connection and set socket status to Base.StatusPaused (i.e. a ready state).
 Raw execution is used to bypass locks and retries
 """
-function prepare(client::Client)
+function prepare!(client::Client)
     write(client.socket, resp(["PING"]))
     recv(client.socket)
     
@@ -238,7 +238,7 @@ Reconnects the input client socket connection.
 function reconnect!(client::Client)
     disconnect!(client)
     client.socket = isnothing(client.ssl_config) ? connect(client.host, client.port) : ssl_connect(connect(client.host, client.port), client.host, client.ssl_config)
-    prepare(client)
+    prepare!(client)
     return client
 end
 

@@ -21,7 +21,85 @@ Returns non-zero if the handle is active, zero if it’s inactive. Is active whe
 something that involves i/o, like reading, writing, connecting, accepting new connections, etc.
 """
 isactive(socket::TCPSocket) = ccall(:uv_is_active, Cint, (Ptr{Cvoid},), socket.handle)
-    
+
+"""
+    netstat(port::Int)::Vector
+
+Calls CLI tool `netstat` to get TCP connection statistics over a specific port.
+Returns a vector os lines, each line represents (Proto, Recv-Q, Send-Q, Local Address, Foreign Address, state).
+"""
+function netstat(port::Int)::Vector
+    try
+        return [split(line) for line in readlines(pipeline(`netstat -na`, `grep $port`))]
+    catch
+        # Catches null pipeline
+    end
+    return
+end
+
+"""
+    tcpstate(src_host::String, src_port::Int, dst_host::String, dst_port::Int)
+
+Returns the TCP state given source and destination host and ports.
+"""
+function tcpstate(src_host::String, src_port::Int, dst_host::String, dst_port::Int)
+    stats = netstat(src_port)
+    isempty(stats) && return
+    for (_, _, _, src_addr, dst_addr, state) in stats
+        if (
+            occursin(src_host, src_addr) &&
+            occursin(string(src_port), src_addr) &&
+            occursin(dst_host, dst_addr) &&
+            occursin(string(dst_port), dst_addr)
+        )
+            return state
+        end
+    end
+    return
+end
+
+"""
+    tcpstate(socket::TCPSocket)
+
+Returns TCP state given a socket object.
+"""
+function tcpstate(socket::TCPSocket)
+    src_host, src_port = hostport(socket)
+    dst_host, dst_port = peerhostport(socket)
+    return tcpstate(src_host, src_port, dst_host, dst_port)
+end
+
+"""
+    hostport(socket::TCPSocket)
+
+Returns host and port given a socket object.
+"""
+function hostport(socket::TCPSocket)
+    host, port = getsockname(socket)
+    return string(host), Int(port)
+end
+
+"""
+    hostport(socket::TCPSocket)
+
+Returns host and port for a peer given a socket object.
+"""
+function peerhostport(socket::TCPSocket)
+    host, port = getpeername(socket)
+    return string(host), Int(port)
+end
+
+"""
+    tryclose(socket::TCPSocket)
+
+Closes a TCP socket connection if the TCP state is `CLOSE_WAIT`.
+"""
+function tryclose(socket::TCPSocket)
+    if isactive(socket) == 0 tcpstate(socket) == "CLOSE_WAIT"
+        close(socket)
+    end
+end
+
 """
     _uv_readcb(handle::Ptr{Cvoid}, nread::Cssize_t, buf::Ptr{Cvoid})
 
@@ -83,8 +161,10 @@ function _uv_readcb(handle::Ptr{Cvoid}, nread::Cssize_t, buf::Ptr{Cvoid})
 
 
             # Line added to close socket when server connection breaks
+            # Closes the connection if the TCP state is CLOSE_WAIT
             # Must be called asynchronously
-            @async begin isactive(stream) == 0 && close(stream) end
+            # TODO: Differentiate UV_ENOBUFS event with server close event
+            # @async tryclose(stream)
         end
         nothing
     end

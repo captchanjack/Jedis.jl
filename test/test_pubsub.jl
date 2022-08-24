@@ -112,6 +112,24 @@ end
     wait_until_unsubscribed(subscriber)
     @test subscriber.is_subscribed == false
     @test isempty(subscriber.subscriptions)
+
+    task = @async psubscribe(patterns...; client=subscriber) do msg
+        push!(messages, msg)
+    end
+    
+    wait_until_subscribed(subscriber)
+    disconnect!(subscriber)  # force close
+    
+    @test subscriber.is_subscribed == false
+    @test isempty(subscriber.subscriptions)
+    @test istaskdone(task)
+    try
+        fetch(task)
+    catch err
+        @test err isa TaskFailedException
+        @test err.task.result isa Base.IOError
+        @test err.task.result.code == Base.UV_ECONNABORTED
+    end
 end
 
 flushall()

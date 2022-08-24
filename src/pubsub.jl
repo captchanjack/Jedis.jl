@@ -78,10 +78,14 @@ function subscribe(fn::Function, channel, channels...; stop_fn::Function=(msg) -
     execute(["SUBSCRIBE", client.subscriptions...], client)
     @lock client.lock set_subscribed!(client)
     yield()
+    err = nothing
+
     try
         while true
-            type, chnl = msg = recv(client.socket)
-            
+            msg = recv(client.socket)
+            isnothing(msg) && throw(_UVError("readline", UV_ECONNABORTED))
+            type, chnl = msg
+
             if type == "message" && chnl in client.subscriptions
                 fn(msg)
                 stop_fn(msg) && break
@@ -105,6 +109,7 @@ function subscribe(fn::Function, channel, channels...; stop_fn::Function=(msg) -
             @lock client.lock flush!(client)
         end
         @lock client.lock set_unsubscribed!(client)
+        @lock client.lock err isa Base.IOError || reconnect!(client)
     end
 end
 
@@ -188,11 +193,13 @@ function psubscribe(fn::Function, pattern, patterns...; stop_fn::Function=(msg) 
     @lock client.lock client.psubscriptions = Set([pattern, patterns...])
     execute(["PSUBSCRIBE", client.psubscriptions...], client)
     @lock client.lock set_subscribed!(client)
-
+    yield()
+    err = nothing
+    
     try
         while true
             msg = recv(client.socket)
-            isnothing(msg) && continue
+            isnothing(msg) && throw(_UVError("readline", UV_ECONNABORTED))
             type, pttrn = msg
 
             if type == "pmessage" && pttrn in client.psubscriptions
@@ -218,6 +225,7 @@ function psubscribe(fn::Function, pattern, patterns...; stop_fn::Function=(msg) 
             @lock client.lock flush!(client)
         end
         @lock client.lock set_unsubscribed!(client)
+        @lock client.lock err isa Base.IOError || reconnect!(client)
     end
 end
 

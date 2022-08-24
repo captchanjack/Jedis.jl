@@ -12,7 +12,7 @@ seconds for each keep-alive packet, ignored when `enable` is `0`. After delay ha
 connection is still lost at the end of this procedure, then the handle is destroyed with a 
 UV_ETIMEDOUT error passed to the corresponding callback.
 """
-keepalive!(socket::TCPSocket, enable::Cint, delay::Cint) = ccall(:uv_tcp_keepalive, Cint, (Ptr{Nothing}, Cint, Cuint), socket.handle, enable, delay)
+keepalive!(socket::TCPSocket, enable::Cint, delay::Cint) = ccall(:uv_tcp_keepalive, Cint, (Ptr{Cvoid}, Cint, Cuint), socket.handle, enable, delay)
 
 """
     isactive(socket::TCPSocket)
@@ -90,14 +90,23 @@ function peerhostport(socket::TCPSocket)
 end
 
 """
-    tryclose(socket::TCPSocket)
+    tryclose(socket::TCPSocket, uv_code::Int, nbytes::Int)
 
-Closes a TCP socket connection if the TCP state is `CLOSE_WAIT`.
+Closes a TCP socket connection if all of the following conditions are satisfied:
+- UV error code is < 0
+- bytesavailable for read in buffer == 0
+- socket is not active
+- TCP state is `CLOSE_WAIT` or `CLOSED`
 """
-function tryclose(socket::TCPSocket)
-    if isactive(socket) == 0 tcpstate(socket) == "CLOSE_WAIT"
+function tryclose(socket::TCPSocket, uv_code::Int, nbytes::Int)
+    if uv_code >= 0 || nbytes != 0 || isactive(socket) == 1
+        return
+    end
+    state = tcpstate(socket)
+    if state == "CLOSE_WAIT" || state == "CLOSED"
         close(socket)
     end
+    return
 end
 
 """
@@ -129,7 +138,7 @@ function _uv_readcb(handle::Ptr{Cvoid}, nread::Cssize_t, buf::Ptr{Cvoid})
                         ccall(:jl_close_uv, Cvoid, (Ptr{Cvoid},), stream.handle)
                         stream.status = StatusClosing
                     end
-                elseif nread == UV_ETIMEDOUT
+                # elseif nread == UV_ETIMEDOUT
                     # TODO: put keepalive timeout callback here
                 else
                     stream.readerror = _UVError("read", nread)
@@ -161,10 +170,9 @@ function _uv_readcb(handle::Ptr{Cvoid}, nread::Cssize_t, buf::Ptr{Cvoid})
 
 
             # Line added to close socket when server connection breaks
-            # Closes the connection if the TCP state is CLOSE_WAIT
+            # Closes the connection if the TCP state is CLOSE_WAIT or CLOSED
             # Must be called asynchronously
-            # TODO: Differentiate UV_ENOBUFS event with server close event
-            # @async tryclose(stream)
+            @async tryclose(stream, nread, bytesavailable(stream.buffer))
         end
         nothing
     end

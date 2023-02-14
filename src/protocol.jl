@@ -28,7 +28,8 @@ function resp(command::AbstractArray)
             cmd = string(cmd)
         end
 
-        r *= "$(RedisType.bulk_string)$(length(cmd))$(CRLF)$(cmd)$(CRLF)"
+        # Need sizeof for non-ascii byte size, length provides char count only
+        r *= "$(RedisType.bulk_string)$(sizeof(cmd))$(CRLF)$(cmd)$(CRLF)"
         n += 1
     end
     

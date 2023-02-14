@@ -13,6 +13,8 @@ end
     @test Jedis.keys("k*") == ["key"]
     @test del("key") == 1
     @test setnx("key", "value") == 1
+    @test set("key", "vαlue") == "OK" # Has non-ascii
+    @test get("key") == ("vαlue")# Has non-ascii
     @test flushdb() == "OK" && isnothing(get("key"))
 end
 

@@ -13,31 +13,31 @@ Links to detailed interfaces and documentation:
 
 ## Usage
 Establishing a basic **[client](https://captchanjack.github.io/Jedis.jl/client/)** connection:
-```
+```jl
 client = Client(host="localhost", port=6379)
 ```
 
 Establishing a **[secured client](https://captchanjack.github.io/Jedis.jl/client/#Jedis.get_ssl_config/)** (SSL/TLS) connection:
-```
+```jl
 ssl_config = get_ssl_config(ssl_certfile="redis.crt", ssl_keyfile="redis.key", ssl_ca_certs="ca.crt")
 client = Client(ssl_config=ssl_config)
 ```
 
 Setting and getting the global client:
-```
+```jl
 set_global_client(client)
 get_global_client()
 ```
 
 Executing **[commands](https://captchanjack.github.io/Jedis.jl/commands/)**:
-```
+```jl
 set("key", "value"; client=client)
 get("key")  # uses global client by default
 execute(["DEL", "key"], client)  # custom commands
 ```
 
 Using **[pipelining](https://captchanjack.github.io/Jedis.jl/pipeline/)** to speed up queries:
-```
+```jl
 # Normal
 pipe = Pipeline()
 set("key", "value"; client=pipe)
@@ -54,7 +54,7 @@ end
 ```
 
 Executing a group of commands atomically with **[MULTI/EXEC transactions](https://captchanjack.github.io/Jedis.jl/commands/#Jedis.multi)**:
-```
+```jl
 # Normal
 multi()
 set("key", "value")
@@ -70,7 +70,7 @@ end
 ```
 
 Executing a MULTI/EXEC transaction within a pipeline:
-```
+```jl
 results = pipeline() do pipe
     lpush("example", 1, 2, 3, 4; client=pipe)
     lpop("example"; client=pipe)
@@ -86,7 +86,7 @@ end
 ```
 
 Using Redis **[Pub/Sub](https://captchanjack.github.io/Jedis.jl/pubsub/)** (interfaces for `subscribe` and `psubscribe` are the same):
-```
+```jl
 # Set up channels, publisher and subscriber clients
 channels = ["first", "second"]
 publisher = Client()
@@ -119,7 +119,7 @@ subscriber.subscriptions  # set of actively subscribed channels should be empty
 ```
 
 Using **[redis locks](https://captchanjack.github.io/Jedis.jl/lock/)** for performing atomic operations:
-```
+```jl
 @async redis_lock("example_lock") do
     sleep(3)  # Lock will exist for 3 seconds
 end
